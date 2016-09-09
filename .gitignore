@@ -4,5 +4,9 @@
 *.[oa]
 build
 mac
+<<<<<<< HEAD
 windows 
+=======
+windows #currently I don't have to modify them
+>>>>>>> myfork/mybranch
 __pycache__
