@@ -1,3 +1,8 @@
 .DS_Store
 *.dll
 *.sdf
+*.[oa]
+build
+mac
+windows #currently I don't have to modify them
+__pycache__
