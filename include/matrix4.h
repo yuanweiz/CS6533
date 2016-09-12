@@ -88,19 +88,19 @@ public:
     return *this = *this * a;
   }
 
-  Matrix4 operator + (const Matrix4& a) const {
+  const Matrix4 operator + (const Matrix4& a) const {
     return Matrix4(*this) += a;
   }
 
-  Matrix4 operator - (const Matrix4& a) const {
+  const Matrix4 operator - (const Matrix4& a) const {
     return Matrix4(*this) -= a;
   }
 
-  Matrix4 operator * (const double a) const {
+  const Matrix4 operator * (const double a) const {
     return Matrix4(*this) *= a;
   }
 
-  Cvec4 operator * (const Cvec4& v) const {
+  const Cvec4 operator * (const Cvec4& v) const {
     Cvec4 r(0);
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 4; ++j) {
@@ -110,7 +110,7 @@ public:
     return r;
   }
 
-  Matrix4 operator * (const Matrix4& m) const {
+  const Matrix4 operator * (const Matrix4& m) const {
     Matrix4 r(0);
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 4; ++j) {
@@ -123,19 +123,19 @@ public:
   }
 
 
-  static Matrix4 makeXRotation(const double ang) {
-    return makeXRotation(std::cos(ang * CS175_PI/180), std::sin(ang * CS175_PI/180));
+  static const Matrix4 makeXRotation(const double angleInRad) {
+    return makeXRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
   }
 
-  static Matrix4 makeYRotation(const double ang) {
-    return makeYRotation(std::cos(ang * CS175_PI/180), std::sin(ang * CS175_PI/180));
+  static const Matrix4 makeYRotation(const double angleInRad) {
+    return makeYRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
   }
 
-  static Matrix4 makeZRotation(const double ang) {
-    return makeZRotation(std::cos(ang * CS175_PI/180), std::sin(ang * CS175_PI/180));
+  static const Matrix4 makeZRotation(const double angleInRad) {
+    return makeZRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
   }
 
-  static Matrix4 makeXRotation(const double c, const double s) {
+  static const Matrix4 makeXRotation(const double c, const double s) {
     Matrix4 r;
     r(1,1) = r(2,2) = c;
     r(1,2) = -s;
@@ -143,7 +143,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeYRotation(const double c, const double s) {
+  static const Matrix4 makeYRotation(const double c, const double s) {
     Matrix4 r;
     r(0,0) = r(2,2) = c;
     r(0,2) = s;
@@ -151,7 +151,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeZRotation(const double c, const double s) {
+  static const Matrix4 makeZRotation(const double c, const double s) {
     Matrix4 r;
     r(0,0) = r(1,1) = c;
     r(0,1) = -s;
@@ -159,7 +159,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeTranslation(const Cvec3& t) {
+  static const Matrix4 makeTranslation(const Cvec3& t) {
     Matrix4 r;
     for (int i = 0; i < 3; ++i) {
       r(i,3) = t[i];
@@ -167,7 +167,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeScale(const Cvec3& s) {
+  static const Matrix4 makeScale(const Cvec3& s) {
     Matrix4 r;
     for (int i = 0; i < 3; ++i) {
       r(i,i) = s[i];
@@ -175,7 +175,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeProjection(
+  static const Matrix4 makeProjection(
     const double top, const double bottom,
     const double left, const double right,
     const double nearClip, const double farClip) {
@@ -199,7 +199,7 @@ public:
     return r;
   }
 
-  static Matrix4 makeProjection(const double fovy, const double aspectRatio, const double zNear, const double zFar) {
+  static const Matrix4 makeProjection(const double fovy, const double aspectRatio, const double zNear, const double zFar) {
     Matrix4 r(0);
     const double ang = fovy * 0.5 * CS175_PI/180;
     const double f = std::abs(std::sin(ang)) < CS175_EPS ? 0 : 1/std::tan(ang);
@@ -278,18 +278,17 @@ inline Matrix4 normalMatrix(const Matrix4& m) {
 }
 
 inline Matrix4 transFact(const Matrix4& m) {
-	// ==========================================
-	// TODO: fill in your own implementation here
-	// ==========================================
+	Matrix4 trans;
+	trans[3]=m[3];
+	trans[7]=m[7];
+	trans[11]=m[11];
+	return trans;
 }
 
 inline Matrix4 linFact(const Matrix4& m) {
-	// ==========================================
-	// TODO: fill in your own implementation here
-	// ==========================================
-	
-	
+	Matrix4 lin(m);
+	lin[3]=lin[7]=lin[11]=0.0;
+	return lin;
 }
-
 #endif
 

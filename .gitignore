@@ -6,3 +6,4 @@ build
 mac
 windows
 __pycache__
+*.gch
