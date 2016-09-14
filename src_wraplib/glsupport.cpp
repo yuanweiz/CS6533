@@ -22,7 +22,7 @@ void checkGlErrors(const char* filename, int lineno) {
 
   if (errCode != GL_NO_ERROR) {
     string error("GL Error: ");
-    error += reinterpret_cast<const char*>(gluErrorString(errCode));
+    //error += reinterpret_cast<const char*>(gluErrorString(errCode));
     error += " ";
     error += filename;
     error += ":";
