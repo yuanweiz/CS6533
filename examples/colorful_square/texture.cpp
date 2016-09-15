@@ -2,7 +2,8 @@
 #include "glsupport.h"
 #include <stdio.h>
 #include "IOAux.h"
-
+#include "Timer.h"
+#include <unistd.h>
 GLuint program;
 
 // a handle to vertex buffer object
@@ -17,12 +18,26 @@ GLuint texCoordAttribute;
 
 //texture
 GLuint imgTexture;
+struct AuxTimer {
+    explicit AuxTimer(const char *fmt):
+        start_(Timer::getTimeOfDay()),
+        fmt_(fmt)
+    {
+    }
+    ~AuxTimer(){
+        auto end = Timer::getTimeOfDay();
+        printf(fmt_,(long long)end-start_);
+    }
+    int64_t start_;
+    const char* fmt_;
+};
 
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(program);
 
+    
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
     glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(positionAttribute);
@@ -30,8 +45,8 @@ void display(void)
     glBindBuffer(GL_ARRAY_BUFFER, vertTexCoordVBO);
     glVertexAttribPointer(texCoordAttribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(texCoordAttribute);
-    glBindTexture(GL_TEXTURE_2D, imgTexture);
 
+    glBindTexture(GL_TEXTURE_2D, imgTexture);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glDisableVertexAttribArray(positionAttribute);
@@ -52,7 +67,7 @@ void init(void)
     string dir = getCurrentDirectory();
     string vs = dir+"/vertex_texture.glsl";
     string fs = dir+"/fragment_texture.glsl";
-    string imgPath = dir+"/emoji.png";
+    string imgPath = dir+"/lena.gif";
 
     imgTexture = loadGLTexture(imgPath.c_str());
     readAndCompileShader(program, 
@@ -95,7 +110,6 @@ void reshape(int w,int h){
 //
 int main(int argc, char* argv[])
 {
-
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(500,500);
