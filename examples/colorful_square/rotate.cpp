@@ -4,6 +4,7 @@
 #include "IOAux.h"
 #include "Timer.h"
 #include <unistd.h>
+#include "Uniform.h"
 GLuint program;
 
 // a handle to vertex buffer object
@@ -21,6 +22,13 @@ GLuint imgTexture;
 
 //uniform
 GLuint timeUniform;
+GLuint posUniform;
+
+//window size
+int g_w = 500,g_h = 500;
+
+bool down=false;
+int64_t t,oldt=0;
 
 void display(void)
 {
@@ -34,12 +42,40 @@ void display(void)
 
     glBindTexture(GL_TEXTURE_2D, imgTexture);
 
+    static float theta=0.0f;
+    static float dtheta=0.f;
+    static float edge =down;
+    if (down){ 
+        t= Timer::getTimeOfDay();
+        if (!edge){
+            oldt=t;
+            puts("edge=down=true");
+            edge = true;
+            printf("theta=%f\n",theta);
+        }
 
-    //draw first one
-    auto timeInMs = Timer::getTimeOfDay()/1000;
-    float t = static_cast<float>(timeInMs%1000);
+        if (oldt==0) {
+            oldt=t; //hit here only once
+            puts("hit here only once");
+        }
+        dtheta=(t-oldt)/1000000.f;
+    }
+    else {
+        //edge-trigger semantics
+        if (edge){
+            oldt= t;
+            puts("now edge=down=false");
+            theta = theta + dtheta;
+            dtheta = 0.f;
+            edge=false;
+            printf("theta=%f\n",theta);
+        }
+    }
 
-    glUniform1f(timeUniform,t/1000.f);
+    glUniform1f(timeUniform,theta+dtheta);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glUniform1f(timeUniform,-theta-dtheta);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glutSwapBuffers();
@@ -60,8 +96,8 @@ void init(void)
     program = glCreateProgram();
     using std::string ;
     string dir = getCurrentDirectory();
-    string vs = dir+"/vertex_time.glsl";
-    string fs = dir+"/fragment_time.glsl";
+    string vs = dir+"/vertex_rotate.glsl";
+    string fs = dir+"/fragment_rotate.glsl";
     string imgPath = dir+"/lena.gif";
 
     imgTexture = loadGLTexture(imgPath.c_str());
@@ -102,9 +138,36 @@ void init(void)
     glBufferData(GL_ARRAY_BUFFER, 12*sizeof(GLfloat), sqTexCoords, GL_STATIC_DRAW);
 
     timeUniform = glGetUniformLocation(program,"time");
+    glUniform1f( timeUniform,0.f);
+
+    ywz::Uniform<float,1> uniform(program,"time");
+    uniform.setValue(1.0f);
 }
+
 void reshape(int w,int h){
+    g_w=w;
+    g_h=h;
     glViewport(0,0,w,h);
+}
+
+void mouse(int button,int state,int x,int y){
+    (void)(x*y); //suppress warning
+    if (button == GLUT_LEFT_BUTTON ){
+        if (state == GLUT_DOWN){
+            down = true;
+            puts("down=true");
+        }
+        else if (state == GLUT_UP){
+            down = false;
+            puts("down=false");
+        }
+    }
+    else {
+    }
+}
+
+void mouseMove(int x,int y){
+    (void)(x+y);
 }
 ///////////////////////////////////////////////////////////
 // Main program entry point
@@ -113,12 +176,15 @@ int main(int argc, char* argv[])
 {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    glutInitWindowSize(500,500);
+    glutInitWindowSize(g_w,g_h);
 	glutCreateWindow("Simple");
 
 	glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutIdleFunc(idle);
+
+    glutMouseFunc(mouse);
+    glutMotionFunc(mouseMove);
     init();
 	glutMainLoop();
 	return 0;

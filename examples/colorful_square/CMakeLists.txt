@@ -20,3 +20,6 @@ target_link_libraries (texture ${LIBS})
 
 add_executable (time time.cpp )
 target_link_libraries (time ${LIBS})
+
+add_executable (rotate rotate.cpp )
+target_link_libraries (rotate ${LIBS})
