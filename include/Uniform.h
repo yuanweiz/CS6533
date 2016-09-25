@@ -2,19 +2,19 @@
 #define __UNIFORM_H
 #include <GL/glew.h>
 #include <functional>
-namespace ywz{
-
-template <int sz,typename T,typename ...tail>
-    struct UniformFuncType{
-        using type=typename UniformFuncType<sz-1,T,T,tail...>::type;
-    };
-template <typename T,typename ...tail>
-    struct UniformFuncType<1,T,tail...>{
-        using type= void(GLuint,T,tail...);
-    };
+#include "Noncopyable.h"
 
 template <typename T,int sz>
-class Uniform {
+class GLUniform :Noncopyable{
+    //helper template
+    template <int s,typename U,typename ...tail>
+        struct UniformFuncType{
+            using type=typename UniformFuncType<s-1,U,U,tail...>::type;
+        };
+    template <typename U,typename ...tail>
+        struct UniformFuncType<1,U,tail...>{
+            using type= void(GLuint,U,tail...);
+        };
     public:
     const static int size = sz;
     typedef T value_type;
@@ -26,29 +26,42 @@ class Uniform {
         }
     
 
-    Uniform(GLuint program,const char* name):
+    GLUniform(GLuint program,const char* name):
         program_(program),
         handle_(glGetUniformLocation(program,name))
     {
         init();
     }
+
+    GLuint get(){return handle_;}
+
     private:
-    void init();
+    //Uniform(GLuint program,const char* name,func_type func):
+    //    program_(program),
+    //    handle_(glGetUniformLocation(program,name)),
+    //    func_(func)
+    //{
+    //}
+    void init(); //not substantialized
     GLuint program_;
     GLuint handle_;
     std::function<func_type> func_;
 };
 
-template<> void Uniform<float,1>::init(){
+//explicitly substantialized here
+template<> void GLUniform<float,1>::init(){
     func_=glUniform1f;
 }
-
-//template<> void Uniform<float,2>::setValue(float v1,float v2){
-//    glUniform2f(handle_,v1,v2);
-//}
-//template<> void Uniform<float,3>::setValue(float v1,float v2,float v3){
-//    glUniform3f(handle_,v1,v2,v3);
-//}
-
+template<> void GLUniform<float,2>::init(){
+    func_=glUniform2f;
 }
+template<> void GLUniform<float,3>::init(){
+    func_=glUniform3f;
+}
+template<> void GLUniform<float,4>::init(){
+    func_=glUniform4f;
+}
+
+
+
 #endif// __UNIFORM_H
