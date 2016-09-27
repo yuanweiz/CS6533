@@ -7,3 +7,4 @@ mac
 windows
 __pycache__
 *.gch
+*.swp
