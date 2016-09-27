@@ -6,8 +6,8 @@ find_package (GLEW)
 include_directories ("include")
 
 add_subdirectory ( "src_wraplib" )
-add_subdirectory ( "./examples/first")
-add_subdirectory ( "./examples/colorful_square")
+#add_subdirectory ( "./examples/first")
+add_subdirectory ( "./homework/homework1")
 
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
