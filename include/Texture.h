@@ -1,8 +1,8 @@
 #ifndef _TEXTURE_H
 #define _TEXTURE_H
-#include "GL/gl.h"
+#include "GL/glew.h"
 #include "Noncopyable.h"
-#include "glsupport.h"
+#include "Error.h"
 // Light wrapper around a GL texture object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 class GlTexture : Noncopyable {

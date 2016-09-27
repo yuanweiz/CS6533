@@ -1,5 +1,6 @@
 varying vec2 varyingTexCoord;
 uniform float time;
+uniform vec2 offset;
 attribute vec4 position;
 attribute vec2 texCoord;
 void main() {
@@ -9,5 +10,5 @@ void main() {
                   sin(time),cos(time), 0,0,
                   0,0,1,0,
                   0,0,0,1);
-    gl_Position =rot* position;
+    gl_Position =rot* vec4(position.r+offset.x,position.g+offset.y,0,1);
 }

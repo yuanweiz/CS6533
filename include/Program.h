@@ -2,7 +2,7 @@
 #define __PROGRAM_H
 #include <GL/glew.h>
 #include "Noncopyable.h"
-#include "glsupport.h"
+#include "Error.h"
 // Light wrapper around GLSL program handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 class GlProgram : Noncopyable {

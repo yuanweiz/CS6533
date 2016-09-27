@@ -22,7 +22,7 @@ GLuint imgTexture;
 
 //uniform
 GLuint timeUniform;
-GLuint posUniform;
+GLuint offsetUniform;
 
 //window size
 int g_w = 500,g_h = 500;
@@ -73,9 +73,11 @@ void display(void)
     }
 
     glUniform1f(timeUniform,theta+dtheta);
+    glUniform2f(offsetUniform,-0.25,-0.25);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glUniform1f(timeUniform,-theta-dtheta);
+    glUniform2f(offsetUniform,0.25,0.25);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glutSwapBuffers();
@@ -138,10 +140,9 @@ void init(void)
     glBufferData(GL_ARRAY_BUFFER, 12*sizeof(GLfloat), sqTexCoords, GL_STATIC_DRAW);
 
     timeUniform = glGetUniformLocation(program,"time");
+    offsetUniform = glGetUniformLocation(program,"offset");
     glUniform1f( timeUniform,0.f);
 
-    ywz::Uniform<float,1> uniform(program,"time");
-    uniform.setValue(1.0f);
 }
 
 void reshape(int w,int h){

@@ -2,7 +2,7 @@
 #define __BUFFER_OBJECT_H
 #include <GL/glew.h>
 #include "Noncopyable.h"
-#include "glsupport.h"
+#include "Error.h"
 // Light wrapper around a GL buffer object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 class GlBufferObject : Noncopyable {

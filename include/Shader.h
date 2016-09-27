@@ -3,7 +3,7 @@
 #include <GL/glew.h>
 #include <stdexcept>
 #include "Noncopyable.h"
-#include "glsupport.h"
+#include "Error.h"
 // Light wrapper around a GL shader (can be geometry/vertex/fragment shader)
 // handle. Automatically allocates and deallocates. Can be casted to GLuint.
 class GlShader : Noncopyable {

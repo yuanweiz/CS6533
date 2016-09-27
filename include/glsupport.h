@@ -3,7 +3,8 @@
 
 #include <iostream>
 #include <stdexcept>
-
+#include "Error.h"
+#include "Shader.h"
 #ifdef __APPLE__
     #include <glut.h>
 #else
@@ -12,13 +13,6 @@
 #endif
 
 GLuint loadGLTexture(const char *filePath);
-
-// Check if there has been an error inside OpenGL and if yes, print the error and
-// through a runtime_error exception.
-void checkGlErrors(const char* filename, int lineno);
-
-// clear all the GL Error flags
-void ignoreGlErrors();
 
 // Reads and compiles a pair of vertex shader and fragment shader files into a
 // GL shader program. Throws runtime_error on error
