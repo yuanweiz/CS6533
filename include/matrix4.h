@@ -123,16 +123,16 @@ public:
   }
 
 
-  static const Matrix4 makeXRotation(const double angleInRad) {
-    return makeXRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
+  static const Matrix4 makeXRotation(const double angleInDegree) {
+    return makeXRotation(std::cos(angleInDegree * CS175_PI/180), std::sin(angleInDegree * CS175_PI/180));
   }
 
-  static const Matrix4 makeYRotation(const double angleInRad) {
-    return makeYRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
+  static const Matrix4 makeYRotation(const double angleInDegree) {
+    return makeYRotation(std::cos(angleInDegree * CS175_PI/180), std::sin(angleInDegree * CS175_PI/180));
   }
 
-  static const Matrix4 makeZRotation(const double angleInRad) {
-    return makeZRotation(std::cos(angleInRad * CS175_PI/180), std::sin(angleInRad * CS175_PI/180));
+  static const Matrix4 makeZRotation(const double angleInDegree) {
+    return makeZRotation(std::cos(angleInDegree * CS175_PI/180), std::sin(angleInDegree * CS175_PI/180));
   }
 
   static const Matrix4 makeXRotation(const double c, const double s) {

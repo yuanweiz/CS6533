@@ -89,10 +89,16 @@ void idle(){
 // Set up the rendering state
 void init(void)
 {
+    glCullFace(GL_BACK);
     glEnable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+
+    glDepthFunc(GL_LESS);
+    glReadBuffer(GL_BACK);
+
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.5,0.5,0.5,1);
-
 
     glewInit();
     program = glCreateProgram();
