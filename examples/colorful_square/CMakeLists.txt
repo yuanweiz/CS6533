@@ -17,3 +17,9 @@ target_link_libraries (single_colored ${LIBS})
 
 add_executable (texture texture.cpp )
 target_link_libraries (texture ${LIBS})
+
+add_executable (time time.cpp )
+target_link_libraries (time ${LIBS})
+
+add_executable (rotate rotate.cpp )
+target_link_libraries (rotate ${LIBS})

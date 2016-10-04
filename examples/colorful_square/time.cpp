@@ -19,25 +19,28 @@ GLuint texCoordAttribute;
 //texture
 GLuint imgTexture;
 
+//uniform
+GLuint timeUniform;
+
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(program);
 
-    
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
     glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(positionAttribute);
 
     glBindBuffer(GL_ARRAY_BUFFER, vertTexCoordVBO);
     glVertexAttribPointer(texCoordAttribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(texCoordAttribute);
 
     glBindTexture(GL_TEXTURE_2D, imgTexture);
 
+
+    //draw first one
+    auto timeInMs = Timer::getTimeOfDay()/1000;
+    float t = static_cast<float>(timeInMs%1000);
+
+    glUniform1f(timeUniform,t/1000.f);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDisableVertexAttribArray(positionAttribute);
-    glDisableVertexAttribArray(texCoordAttribute);
 
 	glutSwapBuffers();
 }
@@ -48,12 +51,17 @@ void idle(){
 // Set up the rendering state
 void init(void)
 {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.5,0.5,0.5,1);
+
+
     glewInit();
     program = glCreateProgram();
     using std::string ;
     string dir = getCurrentDirectory();
-    string vs = dir+"/vertex_texture.glsl";
-    string fs = dir+"/fragment_texture.glsl";
+    string vs = dir+"/vertex_time.glsl";
+    string fs = dir+"/fragment_time.glsl";
     string imgPath = dir+"/lena.gif";
 
     imgTexture = loadGLTexture(imgPath.c_str());
@@ -61,9 +69,13 @@ void init(void)
             vs.c_str(),
             fs.c_str()
             );
+    glUseProgram(program);
 
     positionAttribute = glGetAttribLocation(program,"position");
     texCoordAttribute = glGetAttribLocation(program,"texCoord");
+
+    glEnableVertexAttribArray(texCoordAttribute);
+    glEnableVertexAttribArray(positionAttribute);
 
     glGenBuffers(1, &vertPositionVBO);
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
@@ -88,6 +100,8 @@ void init(void)
         1.0f, 0.0f,
     };
     glBufferData(GL_ARRAY_BUFFER, 12*sizeof(GLfloat), sqTexCoords, GL_STATIC_DRAW);
+
+    timeUniform = glGetUniformLocation(program,"time");
 }
 void reshape(int w,int h){
     glViewport(0,0,w,h);
@@ -104,6 +118,7 @@ int main(int argc, char* argv[])
 
 	glutDisplayFunc(display);
     glutReshapeFunc(reshape);
+    glutIdleFunc(idle);
     init();
 	glutMainLoop();
 	return 0;

@@ -19,8 +19,8 @@ class Timer {
 	static int64_t getTimeOfDay(){
 		struct timeval tv;
 			::gettimeofday(&tv,nullptr);
-			return static_cast<int64_t>(tv.tv_usec)*100000
-				+(tv.tv_sec);
+			return static_cast<int64_t>(tv.tv_sec)*1000000
+				+(tv.tv_usec);
 	}
 
 	Timer (){}

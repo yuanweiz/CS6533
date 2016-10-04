@@ -3,7 +3,8 @@
 
 #include <iostream>
 #include <stdexcept>
-
+#include "Error.h"
+#include "Shader.h"
 #ifdef __APPLE__
     #include <glut.h>
 #else
@@ -12,13 +13,6 @@
 #endif
 
 GLuint loadGLTexture(const char *filePath);
-
-// Check if there has been an error inside OpenGL and if yes, print the error and
-// through a runtime_error exception.
-void checkGlErrors(const char* filename, int lineno);
-
-// clear all the GL Error flags
-void ignoreGlErrors();
 
 // Reads and compiles a pair of vertex shader and fragment shader files into a
 // GL shader program. Throws runtime_error on error
@@ -31,111 +25,6 @@ void linkShader(GLuint programHandle, GLuint vertexShaderHandle, GLuint fragment
 // Reads and compiles a single shader (vertex, fragment, etc) file into a GL
 // shader. Throws runtime_error on error
 void readAndCompileSingleShader(GLuint shaderHandle, const char* shaderFileName);
-
-// Classes inheriting Noncopyable will not have default compiler generated copy
-// constructor and assignment operator
-class Noncopyable {
-protected:
-  Noncopyable() {}
-  ~Noncopyable() {}
-private:
-  Noncopyable(const Noncopyable&);
-  const Noncopyable& operator= (const Noncopyable&);
-};
-
-// Light wrapper around a GL shader (can be geometry/vertex/fragment shader)
-// handle. Automatically allocates and deallocates. Can be casted to GLuint.
-class GlShader : Noncopyable {
-protected:
-  GLuint handle_;
-
-public:
-  GlShader(GLenum shaderType) {
-    handle_ = glCreateShader(shaderType); // create shader handle
-    if (handle_ == 0)
-      throw std::runtime_error("glCreateShader fails");
-    checkGlErrors(__FILE__, __LINE__);
-  }
-
-  ~GlShader() {
-    glDeleteShader(handle_);
-  }
-
-  // Casts to GLuint so can be used directly by glCompile etc
-  operator GLuint() const {
-    return handle_;
-  }
-};
-
-// Light wrapper around GLSL program handle that automatically allocates
-// and deallocates. Can be casted to a GLuint.
-class GlProgram : Noncopyable {
-protected:
-  GLuint handle_;
-
-public:
-  GlProgram() {
-    handle_ = glCreateProgram();
-    if (handle_ == 0)
-      throw std::runtime_error("glCreateProgram fails");
-    checkGlErrors(__FILE__, __LINE__);
-  }
-
-  ~GlProgram() {
-    glDeleteProgram(handle_);
-  }
-
-  // Casts to GLuint so can be used directly by glUseProgram and so on
-  operator GLuint() const {
-    return handle_;
-  }
-};
-
-
-// Light wrapper around a GL texture object handle that automatically allocates
-// and deallocates. Can be casted to a GLuint.
-class GlTexture : Noncopyable {
-protected:
-  GLuint handle_;
-
-public:
-  GlTexture() {
-    glGenTextures(1, &handle_);
-    checkGlErrors(__FILE__, __LINE__);
-  }
-
-  ~GlTexture() {
-    glDeleteTextures(1, &handle_);
-  }
-
-  // Casts to GLuint so can be used directly by glBindTexture and so on
-  operator GLuint () const {
-    return handle_;
-  }
-};
-
-// Light wrapper around a GL buffer object handle that automatically allocates
-// and deallocates. Can be casted to a GLuint.
-class GlBufferObject : Noncopyable {
-protected:
-  GLuint handle_;
-
-public:
-  GlBufferObject() {
-    glGenBuffers(1, &handle_);
-    checkGlErrors(__FILE__, __LINE__);
-  }
-
-  ~GlBufferObject() {
-    glDeleteBuffers(1, &handle_);
-  }
-
-  // Casts to GLuint so can be used directly glBindBuffer and so on
-  operator GLuint() const {
-    return handle_;
-  }
-};
-
 
 // Safe versions of various functions that handle GLSL shader attributes
 // and variables: These mainly issue a warning when specified attributes
