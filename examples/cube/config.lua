@@ -75,7 +75,15 @@ cubeColors = {
 0.982, 0.099, 0.879, 1.0
 }; 
 
+use_3d=false
+
 function init()
+    abs =function (val) if val > 0  then return val else return -val end end
     for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
-    for i = 1,#cubeVerts/3 do cubeVerts[3*i]= cubeVerts[3*i]+3 end
+    if false then
+        for i = 1,#cubeVerts/3 do 
+            cubeVerts[3*i]= cubeVerts[3*i]-3
+            --cubeVerts[3*i] = abs(cubeVerts[3*i])
+        end
+    end
 end

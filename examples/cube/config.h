@@ -17,6 +17,11 @@ class LuaConfig:Noncopyable{
     std::vector<float> getFloatArray (const char*);
     std::vector<double> getDoubleArray (const char*);
 
+    //get value, number-to-bool implicit convertion not permitted
+    bool getBool(const char*);
+    int getInt  (const char*);
+    double getDouble(const char*);
+
     lua_State * get(){return L;}
 
     private:

@@ -9,6 +9,7 @@ extern "C"{
 #include <lauxlib.h>
 }
 
+bool use_3d;
 GLuint program;
 
 // a handle to vertex buffer object
@@ -30,6 +31,7 @@ void display(void)
 
 	glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(program);
+
     Matrix4 obj;
     obj = obj.makeZRotation(45);
     Matrix4 eye;
@@ -39,11 +41,9 @@ void display(void)
     mvm.writeToColumnMajorMatrix(colMajorMat);
     glUniformMatrix4fv(modelviewMatrixUniformLocation,1,false,colMajorMat);
     Matrix4 p;
-    p=p.makeProjection(45.0,1.0,-0.1,-100.0);
+    //p=p.makeProjection(45.0,1.0,-0.1,-100.0);
     p.writeToColumnMajorMatrix(colMajorMat);
     glUniformMatrix4fv(projectionMatrixUniformLocation,1,false,colMajorMat);
-
-
 
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
     glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -53,7 +53,7 @@ void display(void)
     glVertexAttribPointer(colorAttribute, 4, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(colorAttribute);
 
-    glDrawArrays(GL_TRIANGLES, 0, 24);
+    glDrawArrays(GL_TRIANGLES, 0, 108);
     glDisableVertexAttribArray(positionAttribute);
     glDisableVertexAttribArray(colorAttribute);
 
@@ -67,14 +67,13 @@ void idle(){
 void init(void)
 {
     glEnable(GL_BLEND);
-
-    glCullFace(GL_BACK);
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-
-    glDepthFunc(GL_LESS);
-    glReadBuffer(GL_BACK);
-
+    if (use_3d){
+        glCullFace(GL_BACK);
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glReadBuffer(GL_BACK);
+    }
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.,0.,0.,1.);
 
@@ -114,17 +113,20 @@ void reshape(int w,int h){
 ///////////////////////////////////////////////////////////
 // Main program entry point
 //
-void func(void)
-{
-}
 int main(int argc, char* argv[])
 {
 
 	glutInit(&argc, argv);
-	glutInitDisplayMode(
-            GLUT_DOUBLE | GLUT_RGBA 
-            |GLUT_DEPTH
-            );
+
+    std::string fname = getCurrentDirectory()+"/config.lua";
+    LuaConfig config(fname.c_str());
+    use_3d=config.getBool("use_3d");
+    if (use_3d){
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA |GLUT_DEPTH);
+    }
+    else {
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+    }
     glutInitWindowSize(500,500);
 	glutCreateWindow("Simple");
 
