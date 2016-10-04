@@ -77,4 +77,5 @@ cubeColors = {
 
 function init()
     for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
+    for i = 1,#cubeVerts/3 do cubeVerts[3*i]= cubeVerts[3*i]+3 end
 end

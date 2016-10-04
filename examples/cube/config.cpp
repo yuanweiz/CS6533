@@ -27,34 +27,24 @@ LuaConfig::LuaConfig(const char* fname)
 
 LuaConfig::~LuaConfig(){
     if (L){
-        int pos = lua_gettop(L); (void)pos;
-        lua_settop(L,0);
         lua_close(L);
     }
 }
 
 template <typename T>
 std::vector<T> LuaConfig::getArray(const char * name){
-    //std::vector<T> ret={};
-    int pos=lua_gettop(L);(void)pos;
+    std::vector<T> ret;
+    lua_checkstack(L,3); //one for table, two for k/v pair
     lua_getglobal(L,name);
-    if (!lua_istable(L,-1)){
+    int t=lua_gettop(L);
+    if (!lua_istable(L,t)){
         throw std::runtime_error("this table doesn't exist");
     }
-    int i;
-    //when loop stops, i==-cnt-2
-    for (i=-1;!lua_isnil(L,-1);--i){
-        lua_geti(L,i,-i);
+    lua_pushnil(L);
+    while (lua_next (L, t)!=0){
+        ret.push_back( static_cast<T>(lua_tonumber(L,-1)));
+        lua_pop(L,1); //pop up the value and keep the key
     }
-    //ret.reserve(-i-2);
-    std::vector<T> ret(-i-2);
-    for (int j=i+1,k=0;j<-1;++j,++k){
-        ret[k]=static_cast<T>(lua_tonumber(L,j));
-        //ret.push_back(static_cast<T>(lua_tonumber(L,j)));
-    }
-    //including table and nil
-    lua_pop(L,-i);
-    assert (pos==lua_gettop(L));
     return ret;
 }
 

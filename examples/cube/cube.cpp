@@ -66,18 +66,17 @@ void idle(){
 // Set up the rendering state
 void init(void)
 {
-
-    //glCullFace(GL_BACK);
-
     glEnable(GL_BLEND);
-    //glEnable(GL_CULL_FACE);
-    //glEnable(GL_DEPTH_TEST);
 
-    //glDepthFunc(GL_LESS);
-    //glReadBuffer(GL_BACK);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+
+    glDepthFunc(GL_LESS);
+    glReadBuffer(GL_BACK);
 
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glClearColor(0.5,0.5,0.5,1);
+    glClearColor(0.,0.,0.,1.);
 
     std::string fname = getCurrentDirectory()+"/config.lua";
     LuaConfig config(fname.c_str());
@@ -100,12 +99,12 @@ void init(void)
 
     glGenBuffers(1, &vertPositionVBO);
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
-    std::vector<float> cubeVerts = config.getFloatArray("cubeVerts");
+    auto cubeVerts = config.getFloatArray("cubeVerts");
     glBufferData(GL_ARRAY_BUFFER, cubeVerts.size()*sizeof(GLfloat), &cubeVerts[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &vertColorVBO);
     glBindBuffer(GL_ARRAY_BUFFER, vertColorVBO);
-    std::vector<float> cubeColors = config.getFloatArray("cubeColors");
+    auto cubeColors = config.getFloatArray("cubeColors");
     glBufferData(GL_ARRAY_BUFFER, cubeColors.size()*sizeof(GLfloat), &cubeColors[0], GL_STATIC_DRAW);
 
 }
@@ -121,11 +120,10 @@ void func(void)
 int main(int argc, char* argv[])
 {
 
-    if(false){
 	glutInit(&argc, argv);
 	glutInitDisplayMode(
             GLUT_DOUBLE | GLUT_RGBA 
-            //|GLUT_DEPTH
+            |GLUT_DEPTH
             );
     glutInitWindowSize(500,500);
 	glutCreateWindow("Simple");
@@ -136,14 +134,5 @@ int main(int argc, char* argv[])
 
     init();
 	glutMainLoop();
-    }
-    func();
-    std::string fname = getCurrentDirectory()+"/config.lua";
-    LuaConfig config(fname.c_str());
-    std::vector<float> cubeVerts = config.getFloatArray("cubeVerts");
-    std::vector<float> cubeColors = config.getFloatArray("cubeColors");
-    //std::string fname=getCurrentDirectory()+"/config.lua";
-    //LuaConfig config(fname.c_str());
-    //auto vf = config.getFloatArray("cubeVerts");
 	return 0;
 }
