@@ -6,23 +6,50 @@ extern "C"{
 #include <stdexcept>
 #include <assert.h>
 #include <cstdio>
+#include <string>
+
+static int initLuaConfig(lua_State *);
+
+//wrapper for lua_get* functions, NOT exception-safe
+template <typename T> T luaToTypeInPcall (lua_State * const L, int index );
+//type traits
+template <typename T>struct LuaTypeTrait;
+
+static void lua_checkstackx(lua_State * L,int cnt){
+    if (!lua_checkstack(L,cnt))
+        throw std::runtime_error("can't allocate space for stack element!");
+}
+
+
+
 
 LuaConfig::LuaConfig(const char* fname)
     :L(luaL_newstate())
 {
-    if (!L || luaL_dofile(L,fname) !=LUA_OK)
-        throw std::runtime_error("can't open config file");
+    //throwing exception here is correct
+    if (!L)throw std::runtime_error ("can't create lua_State");
+    lua_checkstackx(L,2);
+
+    //any function before pcall should not raise lua exceptions(errors)
+    lua_pushcfunction(L,&initLuaConfig);
+    lua_pushlightuserdata(L,const_cast<char*>(fname));
+
+    //now we can use error code to handle exception
+    if (LUA_OK!=lua_pcall(L,1,0,0))
+        throw std::runtime_error("init failed");
+}
+static int initLuaConfig(lua_State *L){
+    const char * fname=static_cast<const char*>(lua_touserdata(L,-1));
+    lua_pop(L,1);
+    luaL_dofile(L,fname);
     luaL_openlibs(L);
     //if has init() function, call it
     lua_getglobal(L,"init");
     if (lua_isfunction(L,-1)){
-        if (LUA_OK!=lua_pcall(L,0,0,0)){
-            const char * err = lua_tostring(L,-1);
-            printf("%s",err);
-            throw std::runtime_error("init failed");
-        }
+        lua_pcall(L,0,0,0);
     }
     else lua_pop(L,1);
+    return 0;
 }
 
 LuaConfig::~LuaConfig(){
@@ -31,19 +58,52 @@ LuaConfig::~LuaConfig(){
     }
 }
 
-template <typename T>
-std::vector<T> LuaConfig::getArray(const char * name){
-    std::vector<T> ret;
-    lua_checkstack(L,3); //one for table, two for k/v pair
+
+template <typename T> 
+int getArrayInPcall (lua_State* L){
+    using std::vector;
+    const char *name = static_cast<const char*>(lua_touserdata(L,-2));
+    vector<T> & ret= *static_cast<vector<T>*> (lua_touserdata(L,-1));
+    lua_pop(L,2);
+    //one for table, two for k/v pair
+    if (!lua_checkstack(L,2))
+        lua_error(L); //one for table, two for k/v pair
     lua_getglobal(L,name);
-    int t=lua_gettop(L);
-    if (!lua_istable(L,t)){
-        throw std::runtime_error("this table doesn't exist");
+    if (!lua_istable(L,-1)){
+        lua_pop(L,1);
+        lua_error(L);
     }
     lua_pushnil(L);
-    while (lua_next (L, t)!=0){
-        ret.push_back( static_cast<T>(lua_tonumber(L,-1)));
+    while (lua_next (L, -2)!=0){
+        //notice here: this function can't have strong exception-safe 
+        //guarantee because lua_to* functions may call __setjmp,
+        //and left ret to be "half initialized"
+        //However, memory leak will not happen because
+        //ret is just an on-stack reference,
+        //and no RAII is involved. (weak exception safety guaranteed!)
+        T val = luaToTypeInPcall<T>(L,-1);
+        try {
+            ret.push_back (val);
+        }
+        catch (...){
+            //swallow it
+            lua_error(L);
+        }
         lua_pop(L,1); //pop up the value and keep the key
+    }
+    return 0;
+}
+
+
+template <typename T>
+std::vector<T> LuaConfig::getArray(const char * name){
+    lua_checkstackx(L,3);
+    std::vector<T> ret;
+    lua_pushcfunction(L,&getArrayInPcall<T>);
+    lua_pushlightuserdata(L,const_cast<char*>(name));
+    lua_pushlightuserdata(L,&ret);
+    if (LUA_OK!=lua_pcall(L,2,0,0)){
+        throw std::runtime_error("failed to get array");
     }
     return ret;
 }
@@ -53,30 +113,33 @@ std::vector<float> LuaConfig::getFloatArray(const char*name){
     return getArray<float>(name);
 }
 
-//TODO:this double->int32 convertion is buggy (should use i=f+0.5)
 std::vector<int> LuaConfig::getIntArray(const char*name){
     return getArray<int>(name);
 }
 
-//type traits
-template <typename T>struct LuaTypeTrait;
 template <> struct LuaTypeTrait<int>{ const static int LUATYPE=LUA_TNUMBER ;};
 template <> struct LuaTypeTrait<double>{ const static int LUATYPE=LUA_TNUMBER ;};
 template <> struct LuaTypeTrait<float>{ const static int LUATYPE=LUA_TNUMBER ;};
 template <> struct LuaTypeTrait<bool>{ const static int LUATYPE=LUA_TBOOLEAN ;};
+template <> struct LuaTypeTrait<std::string> {const static int LUATYPE=LUA_TSTRING; };
+template <> struct LuaTypeTrait<const char*> {const static int LUATYPE=LUA_TSTRING; };
 
-//wrapper for lua_get* functions, no check of stack size or type
-template <typename T>T luaToType (lua_State * const L, int index );
-template <> int luaToType<int> (lua_State* const L, int index){
+template <> int luaToTypeInPcall<int> (lua_State* const L, int index){
     return static_cast<int>( .5+lua_tonumber (L,index) );
 }
-template <> double luaToType<double> (lua_State* const L, int index){
+template <> double luaToTypeInPcall<double> (lua_State* const L, int index){
     return  lua_tonumber (L,index) ;
 }
-template <> bool luaToType<bool> (lua_State* const L, int index){
+template <> float luaToTypeInPcall<float> (lua_State* const L, int index){
+    return  lua_tonumber (L,index) ;
+}
+template <> bool luaToTypeInPcall<bool> (lua_State* const L, int index){
     int val =  lua_toboolean(L,index);
     bool ret = static_cast<bool>(val);
     return ret;
+}
+template <> const char* luaToTypeInPcall<const char*> (lua_State* const L,int index){
+    return lua_tostring(L,index);
 }
 
 
@@ -87,13 +150,11 @@ T luaGetValue (lua_State * const L, const char * name){
     lua_checkstack(L,1); 
     if (lua_getglobal(L,name)!= lua_type){
         lua_pop(L,1);
-        throw std::runtime_error("such value doesn't exist or is of wrong type");
+        lua_error(L);
     }
-    else {
-        T val =  luaToType<T>(L,-1);
-        lua_pop(L,1);
-        return val;
-    }
+    T val =  luaToTypeInPcall<T>(L,-1);
+    lua_pop(L,1);
+    return val;
 }
 
 int LuaConfig::getInt(const char* name){

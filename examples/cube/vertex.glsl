@@ -6,7 +6,6 @@ uniform mat4 p;
 
 void main() {
     varyingColor = color;
-    vec4 tmp = position;
-    //tmp.a=1.0;
-    gl_Position = tmp;
+    //gl_Position = position;
+    gl_Position = p * mvm* position;
 }

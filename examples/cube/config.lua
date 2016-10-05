@@ -77,13 +77,20 @@ cubeColors = {
 
 use_3d=false
 
+rotate = { 0.0,0.0,45}
+
+eye={ 1.5,0.0,0.0}
+
+--(const double fovy, const double aspectRatio, const double zNear, const double zFar) 
+projection = {45.0,1.0,-0.1,-100.0}
+
 function init()
-    abs =function (val) if val > 0  then return val else return -val end end
-    for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
+    --abs =function (val) if val > 0  then return val else return -val end end
+    --for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
+
     if false then
         for i = 1,#cubeVerts/3 do 
-            cubeVerts[3*i]= cubeVerts[3*i]-3
-            --cubeVerts[3*i] = abs(cubeVerts[3*i])
+            cubeVerts[3*i]= cubeVerts[3*i] -3.0
         end
     end
 end
