@@ -8,7 +8,6 @@ extern "C"{
 #include <cstdio>
 #include <string>
 
-static int initLuaConfig(lua_State *);
 void lua_pcallx (lua_State* L,int nargs,int nresults,int msgh){
     const char * err;
     if (LUA_OK!=lua_pcall(L,nargs,nresults,msgh)){
@@ -28,6 +27,24 @@ static void lua_checkstackx(lua_State * L,int cnt){
 }
 
 
+int initLuaConfig(lua_State *L){
+    const char * fname=static_cast<const char*>(lua_touserdata(L,-1));
+    lua_pop(L,1);
+    //int ret = luaL_dofile(L,fname);
+    luaL_openlibs(L);
+    int ret = luaL_loadfile(L, fname) | lua_pcall(L, 0, LUA_MULTRET, 0);
+
+    if (ret!=LUA_OK){
+        lua_error(L);
+    }
+    //if has init() function, call it
+    lua_getglobal(L,"init");
+    if (lua_isfunction(L,-1)){
+        lua_pcall(L,0,1,0);
+    }
+    else lua_pop(L,1);
+    return 0;
+}
 
 
 LuaConfig::LuaConfig(const char* fname)
@@ -45,19 +62,6 @@ LuaConfig::LuaConfig(const char* fname)
     lua_pcallx(L,1,1,0);
     //if (LUA_OK!=lua_pcall(L,1,0,0))
     //    throw std::runtime_error("init failed");
-}
-static int initLuaConfig(lua_State *L){
-    const char * fname=static_cast<const char*>(lua_touserdata(L,-1));
-    lua_pop(L,1);
-    luaL_dofile(L,fname);
-    luaL_openlibs(L);
-    //if has init() function, call it
-    lua_getglobal(L,"init");
-    if (lua_isfunction(L,-1)){
-        lua_pcall(L,0,1,0);
-    }
-    else lua_pop(L,1);
-    return 0;
 }
 
 LuaConfig::~LuaConfig(){
@@ -224,8 +228,8 @@ int luaGetValueInPcall (lua_State*L){
                     (lua_touserdata(L,-1));
     lua_pop(L,1);
     lua_checkstack(L,1);
-    const int lua_type = LuaTypeTrait<T>::LUATYPE;
-    if (lua_getglobal(L,name)!= lua_type){
+    const int type = LuaTypeTrait<T>::LUATYPE;
+    if (lua_getglobal(L,name)!= type){
         lua_pop(L,1);
         lua_pushstring (L,"Type mismatch");
         lua_error(L);

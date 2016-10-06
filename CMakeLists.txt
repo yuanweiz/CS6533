@@ -6,8 +6,8 @@ find_package (GLEW)
 include_directories ("include")
 
 add_subdirectory ( "src_wraplib" )
-add_subdirectory ( "./examples/first")
-add_subdirectory ( "./examples/colorful_square")
+#add_subdirectory ( "./examples/first")
+#add_subdirectory ( "./examples/colorful_square")
 add_subdirectory ( "./examples/cube")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

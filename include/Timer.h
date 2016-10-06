@@ -2,7 +2,8 @@
 #define __TIMER_H
 #include <sys/time.h>
 #include <sys/types.h>
-class Timer {
+#include "Noncopyable.h"
+class Timer :Noncopyable{
 	public:
 	static int64_t getTimeOfDay(){
 		struct timeval tv;
@@ -12,9 +13,16 @@ class Timer {
 	}
 
 	Timer (){
+        //the clock is stopped in the beginning
         time_elapsed_ = 0;
         last_tic_ = getTimeOfDay();
         running_ = false;
+    }
+    Timer (Timer && rhs):
+        last_tic_(rhs.last_tic_),
+        time_elapsed_(rhs.time_elapsed_),
+        running_(rhs.running_)
+    {
     }
     void start (){
         running_ = true;
@@ -26,9 +34,21 @@ class Timer {
         time_elapsed_ += (now - last_tic_);
         last_tic_ = now;
     }
+    bool isRunning(){
+        return running_;
+    }
+    void changeStat(){
+        if (isRunning()){
+            stop();
+        }
+        else start();
+    }
 
-    //return time elapsed in usec
-    int64_t timeElapsed(){
+    //return time in usec
+    //notice this function returns the time of
+    //total time of running,
+    //not the time since object is created.
+    int64_t runningTime(){
         if (running_){
             return getTimeOfDay()-last_tic_ + time_elapsed_;
         }
@@ -37,8 +57,8 @@ class Timer {
         }
     }
 	private:
-	static int64_t last_tic_;
-    static int64_t time_elapsed_;
+	int64_t last_tic_;
+    int64_t time_elapsed_;
     bool running_;
 };
 

@@ -101,21 +101,27 @@ end
 
 
 
-----[[ here's a simple-format DSL for keyboard event 
----- each has three cols
-----]]
+--[[ here's a simple format for keyboard event 
+-- each has three cols
+--]]
 keyboard = {
-    "AD", 0, 0.2 -- eye_x
+    "AD", 0, 0.2, -- eye_x
     -- press A to increase, 
     --S to decrease the value, 
     --initial is 1.5, 
     --step
     "WS", 2 , 0.2, -- eye_y
     "ZX", 7, 0.3, --eye_z
-
     --here are three lines that only provide
     --key stroke to increase the value
     "J", 0, 5, --rot_x
     "K", 0, 5, --rot_y
     "L", 0, 5, --rot_z
+}
+
+--[[ Similarly, 
+-- each row means: trigger, initial, change rate ( in s^-1)
+--]]
+timeVariable = {
+    "R",0,45,  -- rot_z, increasing 45 degree each second
 }

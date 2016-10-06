@@ -4,6 +4,7 @@
 #include "IOAux.h"
 #include "config.h"
 #include "matrix4.h"
+#include "Timer.h"
 
 extern "C"{
 #include <lauxlib.h>
@@ -25,6 +26,27 @@ GLuint colorAttribute;
 GLuint modelviewMatrixUniformLocation;
 GLuint projectionMatrixUniformLocation;
 
+class TimeVariable {
+    public:
+        TimeVariable(char c,double initVal,double changeRate):
+            initVal_(initVal),changeRate_(changeRate),
+            trigger_(c),timer_()
+    {
+    }
+        void changeStat(){
+            timer_.changeStat();
+        }
+        double value(){
+            return initVal_ + changeRate_* timer_.runningTime()/1000000;
+        }
+        char trigger(){ return trigger_;}
+    private:
+        const double initVal_;
+        const double changeRate_;
+        char trigger_;
+        Timer timer_;
+};
+
 //configuration from lua script
 std::string currentDirectory(getCurrentDirectory());
 std::string configFileName (currentDirectory +"/config.lua");
@@ -35,6 +57,8 @@ double fovy,aspectRatio,zNear,zFar;
 double eye_x,eye_y,eye_z;
 double rot_x,rot_y,rot_z;
 std::vector<std::shared_ptr<void>> keyBoardConfig;
+std::vector<TimeVariable> timeVariables;
+
 template <class T> T& any_ref_cast(std::shared_ptr<void>& pv){
     return *static_cast<T*>(pv.get());
 }
@@ -50,11 +74,12 @@ void display(void)
     }
     glUseProgram(program);
 
-    Matrix4 obj = Matrix4::makeZRotation(rot_z);
-    
     eye_x = any_ref_cast<double>(keyBoardConfig[1]);
     eye_y = any_ref_cast<double>(keyBoardConfig[4]);
     eye_z = any_ref_cast<double>(keyBoardConfig[7]);
+    rot_z = timeVariables[0].value();
+
+    Matrix4 obj = Matrix4::makeZRotation(rot_z);
 
     Matrix4 eye = Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
     //eye.makeTranslation(Cvec3(-.5,0.,0.));
@@ -135,6 +160,15 @@ void readLuaConfig(){
     auto rotate = config.getFloatArray("rotate");
     auto projection = config.getFloatArray("projection");
     keyBoardConfig=config.getAnyArray("keyboard");
+    //decode it into TimeVariable
+    auto timeConfig = config.getAnyArray("timeVariable");
+    for (size_t i =0;i<timeConfig.size();i+=3){
+        auto & str = any_ref_cast<std::string>(timeConfig[i]);
+        auto initVal = any_ref_cast<double>(timeConfig[i+1]);
+        auto changeRate = any_ref_cast<double>(timeConfig[i+2]);
+        //move semantics
+        timeVariables.push_back( TimeVariable{str[0],initVal,changeRate});
+    }
     eye_x = eye[0];
     eye_y = eye[1];
     eye_z = eye[2];
@@ -152,17 +186,27 @@ void keyboard (unsigned char c,int ,int ){
         readLuaConfig(); //refresh
         return;
     }
+    auto equal = [] (unsigned char a,unsigned char b){
+        return (0x20 |a)==(0x20|b);
+    };
     for (size_t i=0;i<keyBoardConfig.size();i+=3){
         auto & key = any_ref_cast<std::string>(keyBoardConfig[i]);
         double & val = any_ref_cast<double>(keyBoardConfig[i+1]);
         double step= any_ref_cast<double>(keyBoardConfig[i+2]);
-        if (key[0] == (c|0x20)){ //ignore case
+        if (equal(key[0],c)){ //ignore case
             val+=step;
-            return;
+            break;
         }
-        else if (key.size()>1&&key[1]==(c|0x20)){
+        else if (key.size()>1&&equal(key[1],c)){
             val-=step;
-            return;
+            break;
+        }
+    }
+    //handle timeVariables
+    for (auto & val : timeVariables){
+        if (val.trigger() == c){
+            val.changeStat();
+            break;
         }
     }
 }
