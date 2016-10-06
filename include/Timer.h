@@ -4,18 +4,6 @@
 #include <sys/types.h>
 class Timer {
 	public:
-	static int64_t getTimeInterval(){
-		if (cached == 0 ) {
-			//never called before
-			cached = getTimeOfDay();
-			return 0;
-		}
-		else{
-			auto old = cached;
-			cached = getTimeOfDay();
-			return cached - old;
-		}
-	}
 	static int64_t getTimeOfDay(){
 		struct timeval tv;
 			::gettimeofday(&tv,nullptr);
@@ -23,9 +11,35 @@ class Timer {
 				+(tv.tv_usec);
 	}
 
-	Timer (){}
+	Timer (){
+        time_elapsed_ = 0;
+        last_tic_ = getTimeOfDay();
+        running_ = false;
+    }
+    void start (){
+        running_ = true;
+        last_tic_ = getTimeOfDay();
+    }
+    void stop(){
+        running_ = false;
+        int64_t now = getTimeOfDay();
+        time_elapsed_ += (now - last_tic_);
+        last_tic_ = now;
+    }
+
+    //return time elapsed in usec
+    int64_t timeElapsed(){
+        if (running_){
+            return getTimeOfDay()-last_tic_ + time_elapsed_;
+        }
+        else {
+            return time_elapsed_;
+        }
+    }
 	private:
-	static int64_t cached;
+	static int64_t last_tic_;
+    static int64_t time_elapsed_;
+    bool running_;
 };
 
 #endif //__TIMER_H

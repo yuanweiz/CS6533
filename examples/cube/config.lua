@@ -75,22 +75,47 @@ cubeColors = {
 0.982, 0.099, 0.879, 1.0
 }; 
 
-use_3d=false
+use_3d=true
 
-rotate = { 0.0,0.0,45}
+lua_test=false
 
-eye={ 1.5,0.0,0.0}
+rotate = { 0.0,76,45}
+
+eye={ 0.,2.0,7.3}
 
 --(const double fovy, const double aspectRatio, const double zNear, const double zFar) 
 projection = {45.0,1.0,-0.1,-100.0}
 
+
+
 function init()
     --abs =function (val) if val > 0  then return val else return -val end end
-    --for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
+    for k,v in pairs(cubeVerts) do cubeVerts[k]=v*.5; end
 
     if false then
         for i = 1,#cubeVerts/3 do 
-            cubeVerts[3*i]= cubeVerts[3*i] -3.0
+            cubeVerts[3*i]= cubeVerts[3*i] 
         end
     end
 end
+
+
+
+----[[ here's a simple-format DSL for keyboard event 
+---- each has three cols
+----]]
+keyboard = {
+    "AD", 0, 0.2 -- eye_x
+    -- press A to increase, 
+    --S to decrease the value, 
+    --initial is 1.5, 
+    --step
+    "WS", 2 , 0.2, -- eye_y
+    "ZX", 7, 0.3, --eye_z
+
+    --here are three lines that only provide
+    --key stroke to increase the value
+    "J", 0, 5, --rot_x
+    "K", 0, 5, --rot_y
+    "L", 0, 5, --rot_z
+}

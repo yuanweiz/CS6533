@@ -1,6 +1,9 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 #include <vector>
+#include <string>
+#include <map>
+#include <memory>
 extern "C"{
 #include <lua.h>
 }
@@ -16,11 +19,18 @@ class LuaConfig:Noncopyable{
     std::vector<int> getIntArray (const char*);
     std::vector<float> getFloatArray (const char*);
     std::vector<double> getDoubleArray (const char*);
+    using AnyPtr = std::shared_ptr<void> ;
+    std::vector<AnyPtr> getAnyArray (const char*);
 
     //get value, number-to-bool implicit convertion not permitted
     bool getBool(const char*);
     int getInt  (const char*);
     double getDouble(const char*);
+    std::string getString(const char*);
+
+    //get dictionary
+    template <typename K,typename V>
+        std::map<K,V> getDict (const char*);
 
     lua_State * get(){return L;}
 
