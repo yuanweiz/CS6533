@@ -36,6 +36,12 @@ class TimeVariable {
         void changeStat(){
             timer_.changeStat();
         }
+        void start(){
+            timer_.start();
+        }
+        void stop(){
+            timer_.stop();
+        }
         double value(){
             return initVal_ + changeRate_* timer_.runningTime()/1000000;
         }
@@ -74,10 +80,13 @@ void display(void)
     }
     glUseProgram(program);
 
-    eye_x = any_ref_cast<double>(keyBoardConfig[1]);
-    eye_y = any_ref_cast<double>(keyBoardConfig[4]);
-    eye_z = any_ref_cast<double>(keyBoardConfig[7]);
+    //eye_x = any_ref_cast<double>(keyBoardConfig[1]);
+    //eye_y = any_ref_cast<double>(keyBoardConfig[4]);
+    //eye_z = any_ref_cast<double>(keyBoardConfig[7]);
     rot_z = timeVariables[0].value();
+    eye_x = timeVariables[1].value()+timeVariables[2].value();
+    eye_y = timeVariables[3].value()+timeVariables[4].value();
+    eye_z = timeVariables[5].value()+timeVariables[6].value();
 
     Matrix4 obj = Matrix4::makeZRotation(rot_z);
 
@@ -162,6 +171,7 @@ void readLuaConfig(){
     keyBoardConfig=config.getAnyArray("keyboard");
     //decode it into TimeVariable
     auto timeConfig = config.getAnyArray("timeVariable");
+    timeVariables.clear();
     for (size_t i =0;i<timeConfig.size();i+=3){
         auto & str = any_ref_cast<std::string>(timeConfig[i]);
         auto initVal = any_ref_cast<double>(timeConfig[i+1]);
@@ -181,37 +191,43 @@ void readLuaConfig(){
     zFar = projection[3];
 }
 
+bool char_equal (unsigned char a,unsigned char b){
+    return (0x20 |a)==(0x20|b);
+}
 void keyboard (unsigned char c,int ,int ){
     if (c=='1'){
-        readLuaConfig(); //refresh
+        readLuaConfig();
         return;
     }
-    auto equal = [] (unsigned char a,unsigned char b){
-        return (0x20 |a)==(0x20|b);
-    };
+    if (false)
     for (size_t i=0;i<keyBoardConfig.size();i+=3){
         auto & key = any_ref_cast<std::string>(keyBoardConfig[i]);
         double & val = any_ref_cast<double>(keyBoardConfig[i+1]);
         double step= any_ref_cast<double>(keyBoardConfig[i+2]);
-        if (equal(key[0],c)){ //ignore case
+        if (char_equal(key[0],c)){ //ignore case
             val+=step;
             break;
         }
-        else if (key.size()>1&&equal(key[1],c)){
+        else if (key.size()>1&&char_equal(key[1],c)){
             val-=step;
             break;
         }
     }
     //handle timeVariables
     for (auto & val : timeVariables){
-        if (val.trigger() == c){
-            val.changeStat();
+        if (char_equal(val.trigger(), c)){
+            val.start();
             break;
         }
     }
 }
-void keyboardup(unsigned char,int ,int){
-    printf("KeyUp\n");
+void keyboardup(unsigned char c,int ,int){
+    for (auto & val : timeVariables){
+        if (char_equal(val.trigger(), c)){
+            val.stop();
+            break;
+        }
+    }
 }
 ///////////////////////////////////////////////////////////
 // Main program entry point

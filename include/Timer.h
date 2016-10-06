@@ -25,10 +25,12 @@ class Timer :Noncopyable{
     {
     }
     void start (){
+        if (running_)return;
         running_ = true;
         last_tic_ = getTimeOfDay();
     }
     void stop(){
+        if(!running_)return;
         running_ = false;
         int64_t now = getTimeOfDay();
         time_elapsed_ += (now - last_tic_);
