@@ -131,11 +131,9 @@ std::vector<int> LuaConfig::getIntArray(const char*name){
     return getArray<int>(name);
 }
 
-static int getAnyArrayInPcall(lua_State*L){
-    using std::vector;
-    using AnyPtr = std::shared_ptr<void>;
+static int getLuaTableInPcall(lua_State*L){
     const char *name = static_cast<const char*>(lua_touserdata(L,-2));
-    auto & ret= *static_cast<vector<AnyPtr>*> (lua_touserdata(L,-1));
+    auto & ret= *static_cast<LuaTable*> (lua_touserdata(L,-1));
     lua_pop(L,2);
     if (!lua_checkstack(L,3)){
         lua_pushstring(L,"no enough stack space");
@@ -150,29 +148,18 @@ static int getAnyArrayInPcall(lua_State*L){
     lua_pushnil(L);
     while (lua_next (L, -2)!=0){
         int type = lua_type(L,-1);
-        AnyPtr p;
         switch (type){
             case LUA_TNUMBER:
-                p=std::make_shared<double>(lua_tonumber(L,-1));
+                ret.push_back(lua_tonumber(L,-1));
                 break;
             case LUA_TBOOLEAN:
-                p=std::make_shared<bool>((bool)lua_toboolean(L,-1));
+                ret.push_back((bool)lua_toboolean(L,-1));
                 break;
             case LUA_TSTRING:
-                p=std::make_shared<std::string>(lua_tostring(L,-1));
+                ret.push_back<std::string>(lua_tostring(L,-1));
                 break;
             default:
                 break;
-        }
-        
-        try {
-            ret.push_back (p);
-        }
-        catch (...){
-            //swallow it
-            lua_pop(L,1);
-            lua_pushstring(L,"vector::push_back throws exception");
-            lua_error(L);
         }
         lua_pop(L,1); //pop up the value and keep the key
     }
@@ -180,12 +167,9 @@ static int getAnyArrayInPcall(lua_State*L){
     return 0;
 }
 
-std::vector<std::shared_ptr<void> > 
-LuaConfig::getAnyArray (const char* name){
-    using std::vector;
-    using AnyPtr = std::shared_ptr<void>;
-    vector<AnyPtr> ret;
-    lua_pushcfunction(L,&getAnyArrayInPcall);
+LuaTable LuaConfig::getLuaTable (const char* name){
+    LuaTable ret;
+    lua_pushcfunction(L,&getLuaTableInPcall);
     lua_pushlightuserdata(L,(char*)name);
     lua_pushlightuserdata(L, &ret);
     lua_pcallx(L,2,1,0);
@@ -262,53 +246,3 @@ std::string LuaConfig::getString(const char *name){
     return luaGetValue<const char*>(L,name);
 }
 
-//getDict
-template <typename K,typename V> int getDictInPcall (lua_State* );
-template <typename K,typename V>
-std::map<K,V> LuaConfig::getDict(const char*name){
-    std::map<K,V> ret;
-    lua_checkstackx(L,3);
-    lua_pushcclosure(L,&getDictInPcall<K,V>,0);
-    lua_pushlightuserdata(L,(char*)name);
-    lua_pushlightuserdata(L,&ret);
-    lua_pcallx(L,2,1,0);
-    return ret;
-}
-template <typename K,typename V> 
-int getDictInPcall (lua_State* L){
-    using std::vector;
-    const char *name = static_cast<const char*>(lua_touserdata(L,-2));
-    auto & ret= *static_cast<std::map<K,V>*> (lua_touserdata(L,-1));
-    lua_pop(L,2);
-    if (!lua_checkstack(L,3)){
-        lua_pushstring(L,"no enough stack space");
-        lua_error(L); //one for table, two for k/v pair
-    }
-    lua_getglobal(L,name);
-    if (!lua_istable(L,-1)){
-        lua_pop(L,1);
-        lua_pushstring(L,"no such table(dict)");
-        lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next (L, -2)!=0){
-        try {
-            //dangerous! what if lua raises an error?
-            K key = luaToTypeInPcall<K>(L,-2);
-            V val = luaToTypeInPcall<V>(L,-1);
-            ret.insert ({key,val});
-        }
-        catch (...){
-            //swallow it
-            lua_pop(L,1);
-            lua_pushstring(L,"error constructing std::map");
-            lua_error(L);
-        }
-        lua_pop(L,1); //pop up the value and keep the key
-    }
-    return 0;
-}
-
-//instantiate
-template std::map<int,int> LuaConfig::getDict(const char*);
-template std::map<std::string,std::string> LuaConfig::getDict(const char*);

@@ -10,5 +10,5 @@ include_directories ("../../include")
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	-g3	-O0" )
 set (CMAKE_CXX_FLAGS_RELEASE	"${CMAKE_CXX_FLAGS_RELEASE}	-O2 -DNDEBUG" )
 
-add_executable (cube cube.cpp config.cpp)
+add_executable (cube cube.cpp config.cpp LuaTable.cpp)
 target_link_libraries (cube ${LIBS})

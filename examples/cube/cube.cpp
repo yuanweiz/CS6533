@@ -62,12 +62,8 @@ bool use_3d;
 double fovy,aspectRatio,zNear,zFar;
 double eye_x,eye_y,eye_z;
 double rot_x,rot_y,rot_z;
-std::vector<std::shared_ptr<void>> keyBoardConfig;
+LuaTable keyBoardConfig;
 std::vector<TimeVariable> timeVariables;
-
-template <class T> T& any_ref_cast(std::shared_ptr<void>& pv){
-    return *static_cast<T*>(pv.get());
-}
 
 void display(void)
 {
@@ -79,10 +75,6 @@ void display(void)
         glClear(GL_COLOR_BUFFER_BIT);
     }
     glUseProgram(program);
-
-    //eye_x = any_ref_cast<double>(keyBoardConfig[1]);
-    //eye_y = any_ref_cast<double>(keyBoardConfig[4]);
-    //eye_z = any_ref_cast<double>(keyBoardConfig[7]);
     rot_z = timeVariables[0].value();
     eye_x = timeVariables[1].value()+timeVariables[2].value();
     eye_y = timeVariables[3].value()+timeVariables[4].value();
@@ -168,14 +160,14 @@ void readLuaConfig(){
     auto eye = config.getFloatArray("eye");
     auto rotate = config.getFloatArray("rotate");
     auto projection = config.getFloatArray("projection");
-    keyBoardConfig=config.getAnyArray("keyboard");
+    keyBoardConfig=config.getLuaTable("keyboard");
     //decode it into TimeVariable
-    auto timeConfig = config.getAnyArray("timeVariable");
+    auto timeConfig = config.getLuaTable("timeVariable");
     timeVariables.clear();
     for (size_t i =0;i<timeConfig.size();i+=3){
-        auto & str = any_ref_cast<std::string>(timeConfig[i]);
-        auto initVal = any_ref_cast<double>(timeConfig[i+1]);
-        auto changeRate = any_ref_cast<double>(timeConfig[i+2]);
+        auto & str = timeConfig.get<std::string>(i);
+        auto initVal = timeConfig.get<double>(i+1);
+        auto changeRate = timeConfig.get<double>(i+2);
         //move semantics
         timeVariables.push_back( TimeVariable{str[0],initVal,changeRate});
     }
@@ -191,7 +183,7 @@ void readLuaConfig(){
     zFar = projection[3];
 }
 
-bool char_equal (unsigned char a,unsigned char b){
+static bool char_equal (unsigned char a,unsigned char b){
     return (0x20 |a)==(0x20|b);
 }
 void keyboard (unsigned char c,int ,int ){
@@ -201,9 +193,9 @@ void keyboard (unsigned char c,int ,int ){
     }
     if (false)
     for (size_t i=0;i<keyBoardConfig.size();i+=3){
-        auto & key = any_ref_cast<std::string>(keyBoardConfig[i]);
-        double & val = any_ref_cast<double>(keyBoardConfig[i+1]);
-        double step= any_ref_cast<double>(keyBoardConfig[i+2]);
+        auto & key = keyBoardConfig.get<std::string>(i);
+        double & val = keyBoardConfig.get<double>(i+1);
+        double step= keyBoardConfig.get<double>(i+2);
         if (char_equal(key[0],c)){ //ignore case
             val+=step;
             break;
