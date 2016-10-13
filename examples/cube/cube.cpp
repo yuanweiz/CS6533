@@ -64,16 +64,11 @@ double eye_x,eye_y,eye_z;
 double rot_x,rot_y,rot_z;
 LuaTable keyBoardConfig;
 std::vector<TimeVariable> timeVariables;
+std::vector<float> cubeVerts,cubeColors;
 
 void display(void)
 {
-
-    if (use_3d){
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    else {
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(program);
     rot_z = timeVariables[0].value();
     eye_x = timeVariables[1].value()+timeVariables[2].value();
@@ -83,12 +78,10 @@ void display(void)
     Matrix4 obj = Matrix4::makeZRotation(rot_z);
 
     Matrix4 eye = Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
-    //eye.makeTranslation(Cvec3(-.5,0.,0.));
     Matrix4 mvm = inv(eye)*obj;
     GLfloat colMajorMat[16] ;
     mvm.writeToColumnMajorMatrix(colMajorMat);
     glUniformMatrix4fv(modelviewMatrixUniformLocation,1,false,colMajorMat);
-    //Matrix4 p= Matrix4::makeProjection(45.0,1.0,-0.1,-100.0);
     Matrix4 p= Matrix4::makeProjection(fovy,aspectRatio,zNear,zFar);
     p.writeToColumnMajorMatrix(colMajorMat);
     glUniformMatrix4fv(projectionMatrixUniformLocation,1,false,colMajorMat);
@@ -101,7 +94,7 @@ void display(void)
     glVertexAttribPointer(colorAttribute, 4, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(colorAttribute);
 
-    glDrawArrays(GL_TRIANGLES, 0, 108);
+    glDrawArrays(GL_TRIANGLES, 0, cubeVerts.size());
     glDisableVertexAttribArray(positionAttribute);
     glDisableVertexAttribArray(colorAttribute);
 
@@ -143,12 +136,12 @@ void init(void)
 
     glGenBuffers(1, &vertPositionVBO);
     glBindBuffer(GL_ARRAY_BUFFER, vertPositionVBO);
-    auto cubeVerts = config.getFloatArray("cubeVerts");
+    cubeVerts = config.getFloatArray("cubeVerts");
     glBufferData(GL_ARRAY_BUFFER, cubeVerts.size()*sizeof(GLfloat), &cubeVerts[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &vertColorVBO);
     glBindBuffer(GL_ARRAY_BUFFER, vertColorVBO);
-    auto cubeColors = config.getFloatArray("cubeColors");
+    cubeColors = config.getFloatArray("cubeColors");
     glBufferData(GL_ARRAY_BUFFER, cubeColors.size()*sizeof(GLfloat), &cubeColors[0], GL_STATIC_DRAW);
 
 }
@@ -227,16 +220,8 @@ void keyboardup(unsigned char c,int ,int){
 int main(int argc, char* argv[])
 {
     glutInit(&argc, argv);
-    //std::string configFileName_ = configFileName;
-    //LuaConfig c(configFileName_.c_str());
-    //c.getBool("use_3d");
     readLuaConfig();
-    if (use_3d){
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA |GLUT_DEPTH);
-    }
-    else {
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-    }
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA |GLUT_DEPTH);
     glutInitWindowSize(500,500);
     glutCreateWindow("Simple");
 
