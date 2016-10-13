@@ -1,3 +1,10 @@
 .DS_Store
 *.dll
 *.sdf
+*.[oa]
+build
+mac
+windows
+__pycache__
+*.gch
+*.swp

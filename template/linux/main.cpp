@@ -1,5 +1,5 @@
 
-#include <glut.h>
+//#include <glut.h>
 #include "glsupport.h"
 
 void display(void) {
