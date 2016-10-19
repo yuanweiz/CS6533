@@ -32,25 +32,16 @@ class LuaConfig:Noncopyable{
     LuaConfig();
     LuaConfig(const char* filename);
     ~LuaConfig();
-    
     std::vector<int> getIntArray (const char*);
     std::vector<float> getFloatArray (const char*);
     std::vector<double> getDoubleArray (const char*);
-
     LuaTable getLuaTable(const char*);
-
     //number-to-bool implicit convertion not permitted
     bool getBool(const char*);
     int getInt  (const char*);
     double getDouble(const char*);
     std::string getString(const char*);
-
-    //get dictionary
-    template <typename K,typename V>
-        std::map<K,V> getDict (const char*);
-
     lua_State * get(){return L;}
-
     private:
     template <typename T>
     std::vector<T> getArray(const char * name);

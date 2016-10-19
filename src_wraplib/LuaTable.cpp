@@ -1,4 +1,4 @@
-#include "config.h"
+#include "LuaConfig.h"
 using namespace std;
 class LuaTable::Impl:Noncopyable{
     public:

@@ -1,4 +1,4 @@
-#include "config.h"
+#include "LuaConfig.h"
 extern "C"{
 #include <lauxlib.h>
 #include <lualib.h>
