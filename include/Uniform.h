@@ -1,67 +1,43 @@
 #ifndef __UNIFORM_H
 #define __UNIFORM_H
+
 #include <GL/glew.h>
-#include <functional>
 #include "Noncopyable.h"
 
-template <typename T,int sz>
-class GLUniform :Noncopyable{
-    //helper template
-    template <int s,typename U,typename ...tail>
-        struct UniformFuncType{
-            using type=typename UniformFuncType<s-1,U,U,tail...>::type;
-        };
-    template <typename U,typename ...tail>
-        struct UniformFuncType<1,U,tail...>{
-            using type= void(GLuint,U,tail...);
-        };
+template <typename T>
+class Uniform :Noncopyable{
     public:
-    const static int size = sz;
-    typedef T value_type;
-    using func_type = typename UniformFuncType<sz,T>::type;
-
-    template <typename ...Args>
-        void setValue(Args...args){
-            func_(handle_,args...);
-        }
-    
-
-    GLUniform(GLuint program,const char* name):
-        program_(program),
-        handle_(glGetUniformLocation(program,name))
-    {
-        init();
-    }
-
+    explicit Uniform(GLuint handle):handle_(handle){}
     GLuint get(){return handle_;}
-
-    private:
-    //Uniform(GLuint program,const char* name,func_type func):
-    //    program_(program),
-    //    handle_(glGetUniformLocation(program,name)),
-    //    func_(func)
-    //{
-    //}
-    void init(); //not substantialized
-    GLuint program_;
-    GLuint handle_;
-    std::function<func_type> func_;
+    template <typename ... Args>
+        void setValue(Args...args){
+            static_cast<T*>(this)->func_(handle_,args...);
+    }
+    protected:
+    const GLuint handle_;
 };
 
-//explicitly substantialized here
-template<> void GLUniform<float,1>::init(){
-    func_=glUniform1f;
-}
-template<> void GLUniform<float,2>::init(){
-    func_=glUniform2f;
-}
-template<> void GLUniform<float,3>::init(){
-    func_=glUniform3f;
-}
-template<> void GLUniform<float,4>::init(){
-    func_=glUniform4f;
+#define UNIFORM_DECLARE_TYPE(name,func)\
+class name: public Uniform<name>{\
+    public:\
+    name(GLuint handle):Uniform<name>(handle){}\
+    const static decltype(func) func_;\
 }
 
+UNIFORM_DECLARE_TYPE(Uniform1f,glUniform1f);
+UNIFORM_DECLARE_TYPE(Uniform2f,glUniform2f);
+UNIFORM_DECLARE_TYPE(Uniform3f,glUniform3f);
+UNIFORM_DECLARE_TYPE(Uniform4f,glUniform4f);
+UNIFORM_DECLARE_TYPE(Uniform1d,glUniform1d);
+UNIFORM_DECLARE_TYPE(Uniform2d,glUniform2d);
+UNIFORM_DECLARE_TYPE(Uniform3d,glUniform3d);
+UNIFORM_DECLARE_TYPE(Uniform4d,glUniform4d);
+UNIFORM_DECLARE_TYPE(UniformMatrix4fv,glUniformMatrix4fv);
 
+//class Uniform1f : public Uniform<Uniform1f> {
+//    public:
+//    Uniform1f(GLuint handle):Uniform<Uniform1f>(handle){}
+//    const static decltype(glUniform1f) func_;
+//};
 
 #endif// __UNIFORM_H

@@ -5,25 +5,27 @@
 #include "Error.h"
 // Light wrapper around GLSL program handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
-class GlProgram : Noncopyable {
+class Program : Noncopyable {
 protected:
   GLuint handle_;
 
 public:
-  GlProgram() {
-    handle_ = glCreateProgram();
-    if (handle_ == 0)
-      throw std::runtime_error("glCreateProgram fails");
-    checkGlErrors(__FILE__, __LINE__);
-  }
+  Program(const char* vs, const char *fs); 
 
-  ~GlProgram() {
+  ~Program() {
     glDeleteProgram(handle_);
   }
+  void useThis(){ glUseProgram(handle_);}
 
-  // Casts to GLuint so can be used directly by glUseProgram and so on
-  operator GLuint() const {
-    return handle_;
+  GLuint getAttribute(const char* name){
+      return glGetAttribLocation(handle_,name);
   }
+
+  GLuint getUniform(const char * name){
+      return glGetUniformLocation(handle_,name);
+  }
+
+  GLuint get(){return handle_;}
+
 };
 #endif// __PROGRAM_H

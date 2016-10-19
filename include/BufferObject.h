@@ -14,8 +14,9 @@ protected:
   size_t size_;
 
 public:
-  GlBufferObject():handle_(0){}
-  void init(T *data, size_t size){
+  //GlBufferObject():handle_(0){}
+  //void init(T *data, size_t size){
+  GlBufferObject (T*data, size_t size){
       size_ = size;
       glGenBuffers(1, &handle_);
       glBindBuffer(BUFFER,handle_);
