@@ -3,6 +3,9 @@
 #include <GL/glew.h>
 #include "cvec.h"
 #include "quat.h"
+#include "Noncopyable.h"
+#include <memory>
+//value semantic, copyable
 struct Transform {
 	Quat rotation;
 	Cvec3 scale;
@@ -11,15 +14,32 @@ struct Transform {
 	}
 	Matrix4 createMatrix();
 };
+
 struct Geometry {
-	GLuint vertexBO;
-	GLuint indexBO;
-	int numIndices;
-	void Draw(GLuint positionAttribute, GLuint normalAttribute) {
-		// bind buffer objects and draw
-	}
+    Geometry(GLuint vbo,GLuint ibo);
+    //Geometry(GLuint vbo,GLuint ibo,Transform t=Transform());
+    ~Geometry();
+    void onDraw();
+    template <typename Func>
+    void setDrawCallback(const Func&);
+    Transform & getTransform();
+    private:
+    class Impl;
+    std::unique_ptr<Impl> pimpl;
 };
 
+struct Entity :Noncopyable{
+    Entity();
+    ~Entity();
+    Entity * addSubEntity(const Transform&);
+    void addGeometry(const Geometry &, const Transform);
+    int size();
+    void draw();
+    Entity& clone();
+    private:
+    class Impl;
+    std::unique_ptr<Impl> pimpl;
+};
 
 #endif// __ENTITY_H
 

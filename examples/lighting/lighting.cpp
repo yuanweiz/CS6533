@@ -2,6 +2,7 @@
 #include "glsupport.h"
 #include <stdio.h>
 #include "matrix4.h"
+#include "geometrymaker.h"
 
 #include "Program.h"
 #include "Uniform.h"
@@ -10,8 +11,11 @@
 #include "Attribute.h"
 
 #include "Timer.h"
+#include <iterator>
+using namespace std;
 
 //global pointers to on-stack objects
+
 Program* program;
 VertexBuffer *vertPosition,*vertColor;
 LuaConfig *config;
@@ -108,8 +112,14 @@ int main(int argc, char* argv[])
     VertexBuffer vertPosition_(cubeVerts.data() ,cubeVerts.size() );
     auto cubeColors = config_.getFloatArray("cubeColors");
     VertexBuffer vertColor_( cubeColors.data(), cubeColors.size() );
+
+    int nvtx,nidx;
+    getCubeVbIbLen(nvtx,nidx);
+    std::vector<VertexPN>verts(nvtx);
+    std::vector<unsigned short>indices(nvtx);
+    makeCube(2.0,verts.begin(),indices.begin());
     
-    //set global pointers, they won't dangle
+
     program = &program_;
     config = &config_;
     position = &position_;

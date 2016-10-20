@@ -14,6 +14,7 @@ using namespace std;
 
 // A generic vertex structure containing position, normal, and texture information
 // Used by make* functions to pass vertex information to the caller
+
 struct GenericVertex {
   Cvec3f pos;
   Cvec3f normal;
@@ -30,6 +31,16 @@ struct GenericVertex {
   {}
 };
 
+struct VertexPN {
+	Cvec3f p, n;
+	VertexPN() {}
+	VertexPN(float x, float y, float z, float nx, float ny, float nz) : p(x,y,z), n(nx, ny, nz) {}
+	VertexPN& operator = (const GenericVertex& v) {
+		p = v.pos;
+		n = v.normal;
+		return *this;
+	}
+};
 inline void getPlaneVbIbLen(int& vbLen, int& ibLen) {
   vbLen = 4;
   ibLen = 6;
