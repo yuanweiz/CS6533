@@ -1,11 +1,10 @@
-varying vec4 varyingColor;
+varying vec4 varyingNormal;
+uniform vec3 uColor;
+vec3 yellow = vec3(1.0,1.0,0);
 void main() {
-    gl_FragColor = vec4(1,0,0,1);
-    //if (varyingColor.r <.01 && varyingColor.g<0.01 && varyingColor.b<0.01)
-    //if (varyingColor.a<0.95)
-    //    gl_FragColor = vec4(1,1,1,1);
-    //else 
-    vec4 color = varyingColor;
-    color.a=1.0;
-    gl_FragColor = color;
+    float diffuse = max(.2, dot(varyingNormal, vec4(-0.5773, 0.5773, 0.5773, 0.0)));
+    vec3 intensity = yellow * diffuse;
+    gl_FragColor = vec4(intensity.xyz, 1.0);
+    //gl_FragColor = vec4(1.0,.0,.0,1.0);
 }
+

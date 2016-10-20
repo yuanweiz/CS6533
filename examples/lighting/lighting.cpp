@@ -16,11 +16,15 @@ using namespace std;
 
 //global pointers to on-stack objects
 
+using VertexPNBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPN>;
+
+VertexPNBuffer *vbo;
+IndexBuffer * ibo;
 Program* program;
-VertexBuffer *vertPosition,*vertColor;
-LuaConfig *config;
-UniformMatrix4fv *modelView, *projection;
-Attribute * color, *position;
+UniformMatrix4fv *modelView, *projection, *normalMat;
+Attribute * normal, *position;
+LuaConfig * config;
+
 
 Timer timer;
 
@@ -53,21 +57,26 @@ void display(void)
     Matrix4 obj = Matrix4::makeZRotation(10.0/100000*timer.runningTime());
     Matrix4 eye=Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
     Matrix4 mvm = inv(eye)*obj;
+
     mvm.writeToColumnMajorMatrix(colMajorMat);
     modelView->setValue(1,false,colMajorMat);
 
-    vertPosition->bind();
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, 0, 0);
+    Matrix4 n = normalMatrix(mvm);
+    n.writeToColumnMajorMatrix(colMajorMat);
+    normalMat->setValue(1,false,colMajorMat);
+#define offset(T,e) ((void*)&(((T*)0)->e))
+    vbo->bind();
+    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,p));
     position->enable();
 
-    vertColor->bind();
-    glVertexAttribPointer(color->get(), 4, GL_FLOAT, GL_FALSE, 0, 0);
-    color->enable();
-
-    glDrawArrays(GL_TRIANGLES, 0, vertPosition->size());
-
+    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,n));
+    normal->enable();
+    //glDrawArrays(GL_TRIANGLES, 0, ->size());
+#undef offset
+    ibo->bind();
+    glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
     position->disable();
-    color->disable();
+    normal->disable();
 
 	glutSwapBuffers();
 }
@@ -105,32 +114,33 @@ int main(int argc, char* argv[])
     Program program_( CURRENT_DIR "/vertex.glsl",CURRENT_DIR "/fragment.glsl");
     LuaConfig config_(CURRENT_DIR "/config.lua");
     Attribute position_( &program_,"position");
-    Attribute color_( &program_,"color");
+    Attribute normal_( &program_,"normal");
     UniformMatrix4fv modelView_(&program_, "mvm"),
-        projection_(&program_,"p");
-    auto cubeVerts = config_.getFloatArray("cubeVerts");
-    VertexBuffer vertPosition_(cubeVerts.data() ,cubeVerts.size() );
-    auto cubeColors = config_.getFloatArray("cubeColors");
-    VertexBuffer vertColor_( cubeColors.data(), cubeColors.size() );
+        projection_(&program_,"p"),
+        normalMat_(&program_,"normalMat");
 
     int nvtx,nidx;
     getCubeVbIbLen(nvtx,nidx);
     std::vector<VertexPN>verts(nvtx);
-    std::vector<unsigned short>indices(nvtx);
+    std::vector<unsigned short>indices(nidx);
     makeCube(2.0,verts.begin(),indices.begin());
+    
+    VertexPNBuffer vbo_(verts.data(),verts.size());
+    IndexBuffer ibo_(indices.data(),indices.size());
     
 
     program = &program_;
-    config = &config_;
     position = &position_;
-    color = &color_;
+    normal = &normal_;
     modelView = &modelView_;
     projection = &projection_;
-    vertPosition = &vertPosition_;
-    vertColor = &vertColor_;
+    normalMat = & normalMat_;
+    vbo = &vbo_;
+    ibo = &ibo_;
+    config = &config_;
 
     program->useThis();
-    color->enable();
+    normal->enable();
     position->enable();
     timer.start();
 

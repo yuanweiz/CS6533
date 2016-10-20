@@ -1,11 +1,11 @@
 attribute vec4 position;
-attribute vec4 color;
-varying vec4 varyingColor;
+attribute vec4 normal;
+varying vec4 varyingNormal;
 uniform mat4 mvm;
 uniform mat4 p;
+uniform mat4 normalMat; //for normal
 
 void main() {
-    varyingColor = color;
-    //gl_Position = position;
+    varyingNormal = normalMat*normal;
     gl_Position = p * mvm* position;
 }
