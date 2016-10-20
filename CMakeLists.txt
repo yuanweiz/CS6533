@@ -7,7 +7,7 @@ include_directories ("include")
 
 add_subdirectory ( "src_wraplib" )
 #add_subdirectory ( "./examples/first")
-#add_subdirectory ( "./examples/colorful_square")
+add_subdirectory ( "./examples/colorful_square")
 #add_subdirectory ( "./examples/cube")
 add_subdirectory ( "./examples/lighting")
 

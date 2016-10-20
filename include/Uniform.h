@@ -3,11 +3,14 @@
 
 #include <GL/glew.h>
 #include "Noncopyable.h"
-
+#include "Program.h"
 template <typename T>
 class Uniform :Noncopyable{
     public:
-    explicit Uniform(GLuint handle):handle_(handle){}
+    Uniform(Program * program, const char* name)
+        :handle_(program->getUniform(name))
+    {
+    }
     GLuint get(){return handle_;}
     template <typename ... Args>
         void setValue(Args...args){
@@ -20,8 +23,10 @@ class Uniform :Noncopyable{
 #define UNIFORM_DECLARE_TYPE(name,func)\
 class name: public Uniform<name>{\
     public:\
-    name(GLuint handle):Uniform<name>(handle){}\
-    const static decltype(func) func_;\
+    name(Program *program, const char* varname):\
+    Uniform<name>(program,varname)\
+        ,func_(func){}\
+    const decltype(func) func_;\
 }
 
 UNIFORM_DECLARE_TYPE(Uniform1f,glUniform1f);

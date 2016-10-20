@@ -4,7 +4,7 @@ find_package (OpenGL)
 find_package (GLEW)
 
 include_directories ("../include")
-add_library (glwrap glsupport.cpp Timer.cpp Uniform.cpp LuaConfig.cpp LuaTable.cpp)
+add_library (glwrap glsupport.cpp Timer.cpp Uniform.cpp LuaConfig.cpp LuaTable.cpp Attribute.cpp Program.cpp)
 target_link_libraries (glwrap GLEW glut GL )
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 

@@ -1,7 +1,7 @@
 #include <GL/glew.h>
 #include "glsupport.h"
 #include <stdio.h>
-#include "IOAux.h"
+//#include "IOAux.h"
 #include "Timer.h"
 #include <unistd.h>
 #include "Uniform.h"
@@ -103,7 +103,7 @@ void init(void)
     glewInit();
     program = glCreateProgram();
     using std::string ;
-    string dir = getCurrentDirectory();
+    string dir = CURRENT_DIR;//getCurrentDirectory();
     string vs = dir+"/vertex_rotate.glsl";
     string fs = dir+"/fragment_rotate.glsl";
     string imgPath = dir+"/lena.gif";

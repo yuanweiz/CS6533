@@ -4,6 +4,7 @@
 #include "Noncopyable.h"
 #include "Error.h"
 #include <cstddef>
+#include "Program.h"
 // Light wrapper around a GL buffer object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 namespace detail{
@@ -16,11 +17,11 @@ protected:
 public:
   //GlBufferObject():handle_(0){}
   //void init(T *data, size_t size){
-  GlBufferObject (T*data, size_t size){
-      size_ = size;
+  GlBufferObject (T*data, size_t sz){
+      size_ = sz;
       glGenBuffers(1, &handle_);
       glBindBuffer(BUFFER,handle_);
-      glBufferData(BUFFER,size*sizeof(T),data,GL_STATIC_DRAW);
+      glBufferData(BUFFER,sz*sizeof(T),data,GL_STATIC_DRAW);
       checkGlErrors(__FILE__, __LINE__);
   }
   void bind (){
@@ -31,11 +32,8 @@ public:
     glDeleteBuffers(1, &handle_);
   }
 
+  size_t size(){return size_;}
   GLuint get(){return handle_;}
-  //// Casts to GLuint so can be used directly glBindBuffer and so on
-  //operator GLuint() const {
-  //  return handle_;
-  //}
 };
 }
 typedef detail::GlBufferObject<GL_ARRAY_BUFFER, GLfloat> VertexBuffer;
