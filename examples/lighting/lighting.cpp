@@ -9,6 +9,7 @@
 #include "LuaConfig.h"
 #include "Attribute.h"
 
+#include "Timer.h"
 
 //global pointers to on-stack objects
 Program* program;
@@ -17,31 +18,49 @@ LuaConfig *config;
 UniformMatrix4fv *modelView, *projection;
 Attribute * color, *position;
 
+Timer timer;
+
 void idle(){
     glutPostRedisplay();
 }
 
 void display(void)
 {
-    float colMajorMat[16];
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //Matrix4 p= Matrix4::makeProjection(fovy,aspectRatio,zNear,zFar);
-    modelView->setValue(1,false,colMajorMat);
-    //p.writeToColumnMajorMatrix(colMajorMat);
-    //glUniformMatrix4fv(projectionMatrixUniformLocation,1,false,colMajorMat);
+    float colMajorMat[16];
+    static LuaTable luaProjection = config->getLuaTable("projection"),
+                    luaEyePosition = config->getLuaTable("eye");
+
+    double fovy=luaProjection.get<double>(0);
+    double aspectRatio=luaProjection.get<double>(1);
+    double zNear=luaProjection.get<double>(2);
+    double zFar=luaProjection.get<double>(3);
+    double eye_x = luaEyePosition.get<double>(0);
+    double eye_y = luaEyePosition.get<double>(1);
+    double eye_z = luaEyePosition.get<double>(2);
+
+    Matrix4 p= Matrix4::makeProjection(fovy,aspectRatio,zNear,zFar);
+    p.writeToColumnMajorMatrix(colMajorMat);
     projection->setValue(1,false,colMajorMat);
+
+    Matrix4 obj = Matrix4::makeZRotation(10.0/100000*timer.runningTime());
+    Matrix4 eye=Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
+    Matrix4 mvm = inv(eye)*obj;
+    mvm.writeToColumnMajorMatrix(colMajorMat);
+    modelView->setValue(1,false,colMajorMat);
 
     vertPosition->bind();
     glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, 0, 0);
-    position->enable();
+    //position->enable();
 
     vertColor->bind();
     glVertexAttribPointer(color->get(), 4, GL_FLOAT, GL_FALSE, 0, 0);
-    color->enable();
+    //color->enable();
 
     glDrawArrays(GL_TRIANGLES, 0, vertPosition->size());
-    position->disable();
-    color->disable();
+
+    //position->disable();
+    //color->disable();
 
 	glutSwapBuffers();
 }
@@ -68,7 +87,7 @@ void init(int *argc, char* argv[])
     glDepthFunc(GL_LESS);
     glReadBuffer(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glClearColor(0.,0.,0.,1.);
+    glClearColor(0.3,0.3,0.3,1.);
     glewInit();
 }
 
@@ -100,6 +119,7 @@ int main(int argc, char* argv[])
     program->useThis();
     color->enable();
     position->enable();
+    timer.start();
 
     glutMainLoop();
 	return 0;

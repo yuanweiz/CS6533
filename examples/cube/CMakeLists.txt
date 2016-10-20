@@ -1,3 +1,4 @@
+project(cube)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 set (LIBS glut GLEW GL glwrap lua)
@@ -10,5 +11,6 @@ include_directories ("../../include")
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}	-g3	-O0" )
 set (CMAKE_CXX_FLAGS_RELEASE	"${CMAKE_CXX_FLAGS_RELEASE}	-O2 -DNDEBUG" )
 
-add_executable (cube cube.cpp config.cpp LuaTable.cpp)
+add_definitions( -DCURRENT_DIR="${PROJECT_SOURCE_DIR}")
+add_executable (cube cube.cpp )
 target_link_libraries (cube ${LIBS})

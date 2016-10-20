@@ -1,14 +1,9 @@
 #include <GL/glew.h>
 #include "glsupport.h"
 #include <stdio.h>
-#include "IOAux.h"
-#include "config.h"
+#include "LuaConfig.h"
 #include "matrix4.h"
 #include "Timer.h"
-
-extern "C"{
-#include <lauxlib.h>
-}
 
 GLuint program;
 
@@ -54,7 +49,7 @@ class TimeVariable {
 };
 
 //configuration from lua script
-std::string currentDirectory(getCurrentDirectory());
+std::string currentDirectory(CURRENT_DIR);
 std::string configFileName (currentDirectory +"/config.lua");
 LuaConfig config(configFileName.c_str());
 bool lua_test;
@@ -121,7 +116,7 @@ void init(void)
     glewInit();
     program = glCreateProgram();
     using std::string ;
-    string dir = getCurrentDirectory();
+    string dir = CURRENT_DIR;
     string vs = dir+"/vertex.glsl";
     string fs = dir+"/fragment.glsl";
     readAndCompileShader(program, 

@@ -153,8 +153,8 @@ projection = {45.0,1.0,-0.1,-200.0}
 
 
 function init()
-    cubeVerts=shape2.verts;
-    cubeColors=shape2.colors;
+    cubeVerts=shape1.verts;
+    cubeColors=shape1.colors;
     --abs =function (val) if val > 0  then return val else return -val end end
 end
 
