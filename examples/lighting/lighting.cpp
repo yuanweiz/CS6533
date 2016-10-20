@@ -20,6 +20,9 @@ Attribute * color, *position;
 
 Timer timer;
 
+class EntityHierarchy {
+    
+};
 void idle(){
     glutPostRedisplay();
 }
@@ -51,16 +54,16 @@ void display(void)
 
     vertPosition->bind();
     glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, 0, 0);
-    //position->enable();
+    position->enable();
 
     vertColor->bind();
     glVertexAttribPointer(color->get(), 4, GL_FLOAT, GL_FALSE, 0, 0);
-    //color->enable();
+    color->enable();
 
     glDrawArrays(GL_TRIANGLES, 0, vertPosition->size());
 
-    //position->disable();
-    //color->disable();
+    position->disable();
+    color->disable();
 
 	glutSwapBuffers();
 }
@@ -104,7 +107,7 @@ int main(int argc, char* argv[])
     auto cubeVerts = config_.getFloatArray("cubeVerts");
     VertexBuffer vertPosition_(cubeVerts.data() ,cubeVerts.size() );
     auto cubeColors = config_.getFloatArray("cubeColors");
-    VertexBuffer vertColor_( cubeVerts.data(), cubeVerts.size() );
+    VertexBuffer vertColor_( cubeColors.data(), cubeColors.size() );
     
     //set global pointers, they won't dangle
     program = &program_;
