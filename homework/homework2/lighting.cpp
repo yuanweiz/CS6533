@@ -16,7 +16,11 @@
 using namespace std;
 using VertexPNBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPN>;
 
-//global pointers to on-stack objects
+//Some Intialization can only be started after glewInit() and glutInit()
+//are called, so I can't put these objects into global static scope.
+//One possible workaround is to use
+//global pointers to main()'s on-stack objects, which won't be disposed
+//until the whole program exits.
 VertexPNBuffer *vbo;
 IndexBuffer * ibo;
 Program* program;
@@ -24,20 +28,13 @@ UniformMatrix4fv *modelView, *projection, *normalMat;
 Uniform3f *color;
 Attribute * normal, *position;
 LuaConfig * config;
-
-
 Timer timer;
 
-class EntityHierarchy {
-    void onDraw();
-};
 void idle(){
     glutPostRedisplay();
 }
 
-void display(void)
-{
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void drawCube(const Matrix4& modelMatrix ){
     float colMajorMat[16];
     static LuaTable luaProjection = config->getLuaTable("projection"),
                     luaEyePosition = config->getLuaTable("eye");
@@ -49,61 +46,59 @@ void display(void)
     double eye_x = luaEyePosition.get<double>(0);
     double eye_y = luaEyePosition.get<double>(1);
     double eye_z = luaEyePosition.get<double>(2);
-
-#define offset(T,e) ((void*)&(((T*)0)->e))
-    //main object
     Matrix4 p= Matrix4::makeProjection(fovy,aspectRatio,zNear,zFar);
     p.writeToColumnMajorMatrix(colMajorMat);
     projection->setValue(1,false,colMajorMat);
 
-    Matrix4 obj = Matrix4::makeZRotation(100.0/1000000*timer.runningTime());
-    Matrix4 eye=Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
-    Matrix4 mvm = inv(eye)*obj;
-
-    mvm.writeToColumnMajorMatrix(colMajorMat);
+    //set eye frame
+    //Matrix4 eye=Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
+    Matrix4 eye=lookFrom(eye_x,eye_y,eye_z,0,1,0);
+    Matrix4 modelViewMatrix = inv(eye)* modelMatrix;
+    modelViewMatrix.writeToColumnMajorMatrix(colMajorMat);
     modelView->setValue(1,false,colMajorMat);
 
-    Matrix4 n = normalMatrix(mvm);
+    //set normalMatrix
+    Matrix4 n = normalMatrix(modelViewMatrix);
     n.writeToColumnMajorMatrix(colMajorMat);
     normalMat->setValue(1,false,colMajorMat);
+
+    //draw
     vbo->bind();
+#define offset(T,e) ((void*)&(((T*)0)->e))
     glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,p));
     glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,n));
+#undef offset
     ibo->bind();
+    glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
+}
+
+void display(void)
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //main object modelView
+    Matrix4 mv = Matrix4::makeZRotation(100.0/1000000*timer.runningTime());
     color->setValue(1.0,1.0,.0);//yellow
-    glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
-    
+    drawCube(mv);
+
     //subobject1
-    Matrix4 relativeTransform = Matrix4::makeTranslation(Cvec3(1.0,1.0,-2.0));
-    auto mvm1 = inv(eye)*obj*relativeTransform;
-    mvm1.writeToColumnMajorMatrix(colMajorMat);
-    modelView->setValue(1,false,colMajorMat);
-    n = normalMatrix(mvm1);
-    n.writeToColumnMajorMatrix(colMajorMat);
-    normalMat->setValue(1,false,colMajorMat);
-    vbo->bind();
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,p));
-    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,n));
-    ibo->bind();
+    Matrix4 t1 = Matrix4::makeTranslation(Cvec3(.0,.0,-3.0));
+    auto mv1 = t1 * mv;
     color->setValue(1.0,.0,.0);//red
-    glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
+    drawCube(mv1);
 
     //subobject2
-    Matrix4 relativeTransform2 = Matrix4::makeTranslation(Cvec3(.0,2.0*sin(10.*timer.runningTime()/1000000),-7.0));
-    mvm = inv(eye)*obj*relativeTransform2;
-    mvm.writeToColumnMajorMatrix(colMajorMat);
-    modelView->setValue(1,false,colMajorMat);
-    n = normalMatrix(mvm);
-    n.writeToColumnMajorMatrix(colMajorMat);
-    normalMat->setValue(1,false,colMajorMat);
-    vbo->bind();
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,p));
-    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPN), offset(VertexPN,n));
-    ibo->bind();
+    double angle1=10.*timer.runningTime()/1000000;
+    Matrix4 t2 = Matrix4::makeTranslation(Cvec3(.0,2.0*sin(angle1),-3.0));
+    auto mv2 = t2 * mv1;
     color->setValue(.0,1.0,.0);//green
-    glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
+    drawCube(mv2);
 
-#undef offset
+    //subobject3
+    Matrix4 t3 = Matrix4::makeTranslation(Cvec3(2.0*cos(angle1),0,-3.0));
+    auto mv3 = t3 * mv2;
+    color->setValue(.0,.0,1.0);//blue
+    drawCube(mv3);
 	glutSwapBuffers();
 }
 
@@ -127,9 +122,10 @@ void init(int *argc, char* argv[])
     glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GREATER);
-    glReadBuffer(GL_BACK);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glClearDepth( -100.0);
+    //glDepthFunc(GL_LESS);
+    glReadBuffer(GL_FRONT);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.3,0.3,0.3,1.);
     glewInit();
 }
@@ -156,7 +152,6 @@ int main(int argc, char* argv[])
     VertexPNBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
     
-
     program = &program_;
     position = &position_;
     normal = &normal_;
@@ -175,5 +170,3 @@ int main(int argc, char* argv[])
     glutMainLoop();
 	return 0;
 }
-
-
