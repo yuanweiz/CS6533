@@ -5,6 +5,7 @@
 build
 mac
 windows
+homework
 __pycache__
 *.gch
 *.swp

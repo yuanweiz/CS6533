@@ -290,5 +290,21 @@ inline Matrix4 linFact(const Matrix4& m) {
 	lin[3]=lin[7]=lin[11]=0.0;
 	return lin;
 }
+
+inline Matrix4 lookFrom(double eyex,double eyey,double eyez, double upx,double upy ,double upz ){
+    Cvec3 z(eyex,eyey,eyez);
+    Cvec3 up(upx,upy,upz);
+    Cvec3 x = cross(up,z);
+    Cvec3 y = cross(z,x);
+    //normalize
+    x=normalize(x);
+    y=normalize(y);
+    z=normalize(z);
+    Matrix4 res;
+    res(0,0)=x[0];res(0,1)=y[0];res(0,2)=z[0];res(0,3)=eyex;
+    res(1,0)=x[1];res(1,1)=y[1];res(1,2)=z[1];res(1,3)=eyey;
+    res(2,0)=x[2];res(2,1)=y[2];res(2,2)=z[2];res(2,3)=eyez;
+    return res;
+}
 #endif
 

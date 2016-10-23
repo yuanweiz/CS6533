@@ -7,6 +7,7 @@
 #include "Program.h"
 // Light wrapper around a GL buffer object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
+
 namespace detail{
 template <int BUFFER,typename T>
 class GlBufferObject : Noncopyable {
@@ -36,7 +37,10 @@ public:
   GLuint get(){return handle_;}
 };
 }
+
+struct VertexPN; //forward declaration
 typedef detail::GlBufferObject<GL_ARRAY_BUFFER, GLfloat> VertexBuffer;
+typedef detail::GlBufferObject<GL_ARRAY_BUFFER, VertexPN> VertexPNBuffer;
 typedef detail::GlBufferObject<GL_ELEMENT_ARRAY_BUFFER, unsigned short> IndexBuffer;
 
 #endif //__BUFFER_OBJECT_H
