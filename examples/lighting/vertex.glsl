@@ -7,5 +7,6 @@ uniform mat4 normalMat; //for normal
 
 void main() {
     varyingNormal = normalMat*normal;
-    gl_Position = p * mvm* position;
+    vec4 pos = p*mvm*position;
+    gl_Position = pos;
 }
