@@ -150,7 +150,9 @@ void display(void)
 	glutSwapBuffers();
 }
 
-void reshape(int w,int h){
+void reshape(int _w,int _h){
+    w=_w;
+    h=_h;
     glViewport(0,0,w,h);
 }
 
