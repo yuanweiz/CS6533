@@ -18,5 +18,7 @@ Uniform/BufferObject class, and RAII wrapper for other openGL handles)
 So if you find these classes useless, just ignore them, and focus 
 on the homework part. :)
 
+P.S. Arcball is now supported, you can drag around.
+
 Sincerely,
 Weizhe Yuan

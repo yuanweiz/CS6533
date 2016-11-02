@@ -2,6 +2,7 @@
 #include "glsupport.h"
 #include <stdio.h>
 #include "matrix4.h"
+#include "quat.h"
 #include "geometrymaker.h"
 
 #include "Program.h"
@@ -30,11 +31,59 @@ Attribute * normal, *position;
 LuaConfig * config;
 Timer timer;
 
+//Arcball related
+
+int w=500,h=500;
+Matrix4 world, rotWorld;
+Cvec3 v0,v1;
+double eye_x,eye_y,eye_z;
+int mouseX,mouseY;
+bool mouseDown,mouseUp;//these two have edge trigger semantics
+bool pressed; //this has level trigger semantic
+
+void mouseClick(int /*button*/,int state,int /*x*/,int/* y*/){
+    if(state == GLUT_UP){
+        mouseUp = true;
+        pressed = false;
+    }
+    else if (state == GLUT_DOWN){
+        mouseDown = true;
+        pressed = true;
+    }
+}
+
+void mouseMove (int x,int y){
+    if (!pressed){
+        return ;
+    }
+    double xInWorld = 2.0*x/w - 1;
+    double yInWorld = 1.0 - 2.0*y/h;
+    if (mouseDown){
+        mouseDown = false;
+        v0 = normalize(Cvec3(xInWorld,yInWorld,1));
+        return;
+    }
+    else if (mouseUp){
+        mouseUp =false;
+        v0 = normalize(Cvec3(xInWorld,yInWorld,1));
+        world=rotWorld*world;
+        rotWorld = Matrix4();
+        return;
+    }
+    v1 = normalize(Cvec3(xInWorld,yInWorld,1));
+    Cvec3 op = cross(v0,v1);
+    double ip = dot(v0,v1);
+    Quat q( ip,op[0],op[1],op[2]);
+    rotWorld = quatToMatrix(q);
+    return ;
+}
+
 void idle(){
     glutPostRedisplay();
 }
 
-void drawCube(const Matrix4& modelMatrix ){
+void drawCube(const Matrix4& modelMatrix_ ){
+    Matrix4 modelMatrix = Matrix4( rotWorld*world*modelMatrix_);
     float colMajorMat[16];
     static LuaTable luaProjection = config->getLuaTable("projection"),
                     luaEyePosition = config->getLuaTable("eye");
@@ -43,15 +92,13 @@ void drawCube(const Matrix4& modelMatrix ){
     double aspectRatio=luaProjection.get<double>(1);
     double zNear=luaProjection.get<double>(2);
     double zFar=luaProjection.get<double>(3);
-    double eye_x = luaEyePosition.get<double>(0);
-    double eye_y = luaEyePosition.get<double>(1);
-    double eye_z = luaEyePosition.get<double>(2);
+    eye_x = luaEyePosition.get<double>(0);
+    eye_y = luaEyePosition.get<double>(1);
+    eye_z = luaEyePosition.get<double>(2);
     Matrix4 p= Matrix4::makeProjection(fovy,aspectRatio,zNear,zFar);
     p.writeToColumnMajorMatrix(colMajorMat);
     projection->setValue(1,false,colMajorMat);
 
-    //set eye frame
-    //Matrix4 eye=Matrix4::makeTranslation(Cvec3(eye_x,eye_y,eye_z));
     Matrix4 eye=lookFrom(eye_x,eye_y,eye_z,0,1,0);
     Matrix4 modelViewMatrix = inv(eye)* modelMatrix;
     modelViewMatrix.writeToColumnMajorMatrix(colMajorMat);
@@ -76,8 +123,10 @@ void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    double rotSpeed = config->getDouble("rotSpeed");
+    double angle=rotSpeed*timer.runningTime()/1000000;
     //main object modelView
-    Matrix4 mv = Matrix4::makeZRotation(100.0/1000000*timer.runningTime());
+    Matrix4 mv = Matrix4::makeZRotation(angle) ;
     color->setValue(1.0,1.0,.0);//yellow
     drawCube(mv);
 
@@ -88,21 +137,22 @@ void display(void)
     drawCube(mv1);
 
     //subobject2
-    double angle1=10.*timer.runningTime()/1000000;
-    Matrix4 t2 = Matrix4::makeTranslation(Cvec3(.0,2.0*sin(angle1),-3.0));
+    Matrix4 t2 = Matrix4::makeTranslation(Cvec3(.0,2.0*sin(angle),-3.0));
     auto mv2 = t2 * mv1;
     color->setValue(.0,1.0,.0);//green
     drawCube(mv2);
 
     //subobject3
-    Matrix4 t3 = Matrix4::makeTranslation(Cvec3(2.0*cos(angle1),0,-3.0));
+    Matrix4 t3 = Matrix4::makeTranslation(Cvec3(2.0*cos(angle),0,-3.0));
     auto mv3 = t3 * mv2;
     color->setValue(.0,.0,1.0);//blue
     drawCube(mv3);
 	glutSwapBuffers();
 }
 
-void reshape(int w,int h){
+void reshape(int _w,int _h){
+    w=_w;
+    h=_h;
     glViewport(0,0,w,h);
 }
 
@@ -111,10 +161,12 @@ void init(int *argc, char* argv[])
     
     glutInit(argc,argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA |GLUT_DEPTH);
-    glutInitWindowSize(500,500);
+    glutInitWindowSize(w,h);
     glutCreateWindow("Simple");
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
+    glutMouseFunc(mouseClick);
+    glutMotionFunc(mouseMove);
     glutIdleFunc(idle);
 
     glEnable(GL_BLEND);
