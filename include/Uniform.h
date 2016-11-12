@@ -4,17 +4,24 @@
 #include <GL/glew.h>
 #include "Noncopyable.h"
 #include "Program.h"
+#include <assert.h>
 template <typename T>
-class Uniform :Noncopyable{
+class Uniform {
     public:
     Uniform(Program * program, const char* name)
         :handle_(program->getUniform(name))
     {
+        if (handle_ == static_cast<GLuint>(-1)){
+            assert(false);
+        }
     }
+    Uniform(const Uniform &)=default;
     GLuint get(){return handle_;}
     template <typename ... Args>
         void setValue(Args...args){
             static_cast<T*>(this)->func_(handle_,args...);
+            auto err = glGetError();
+            assert(err==0); (void)err;
     }
     protected:
     const GLuint handle_;
