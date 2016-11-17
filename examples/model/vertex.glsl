@@ -12,8 +12,9 @@ uniform mat4 normalMat; //for normal
 
 void main() {
     varyingNormal = (normalMat*normal).xyz;
-    varyingPosition = position.xyz;
+    vec4 pos_ = position;
+    varyingPosition = pos_.xyz;
     varyingUv = uv;
-    vec4 pos = p*mvm*position;
+    vec4 pos = p*mvm*pos_;
     gl_Position = pos;
 }

@@ -169,8 +169,8 @@ void drawCube(const Matrix4& modelMatrix_ ){
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    double rotSpeed = config->getDouble("rotSpeed");
-    double angle=rotSpeed*timer.runningTime()/1000000;
+    //double rotSpeed = config->getDouble("rotSpeed");
+    double angle=0;//rotSpeed*timer.runningTime()/1000000;
     Matrix4 mv = Matrix4::makeZRotation(angle) ;
     drawCube(mv);
 	glutSwapBuffers();
@@ -229,7 +229,9 @@ int main(int argc, char* argv[])
     loadObjFile( 
             "/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_Giveaway.obj",
             verts,indices);
-    
+    for (auto & v:verts){
+        v.p = v.p *0.05;
+    }
     
     VertexPNTBTGBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
@@ -249,21 +251,26 @@ int main(int argc, char* argv[])
     program->useThis();
 
     lightList_[0].setPosition(-5.f,-5.f,-5.f);
-    lightList_[0].setDiffuseColor(1.0f,1.0f,0.f);
-    lightList_[0].setSpecularColor(1.0f,1.0f,0.f);
+    lightList_[0].setDiffuseColor(1.0f,1.0f,1.f);
+    lightList_[0].setSpecularColor(1.0f,1.0f,1.f);
     lightList_[1].setPosition(4.f,4.f,-4.f);
-    lightList_[1].setSpecularColor(1.0f,.0f,1.f);
-    lightList_[1].setSpecularColor(1.0f,.0f,1.f);
+    lightList_[1].setSpecularColor(1.0f,1.0f,1.f);
+    lightList_[1].setSpecularColor(1.0f,1.0f,1.f);
 
+    //glActiveTexture sets the current active texture unit(GL_TEXTUREi)
+    //for each texture unit, it has GL_TEXTURE_2D GL_TEXTURE_3D, etc.
+    //
     Uniform1i diffuseu (program,"diffuseTex");
+    diffuseu.setValue(0);
     glActiveTexture(GL_TEXTURE0);
     diffuseTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_D.tga");
-    diffuseu.setValue(0);
+    glBindTexture( GL_TEXTURE_2D, diffuseTex);
+
     Uniform1i specularu (program, "specularTex");
+    specularu.setValue(1);
     glActiveTexture(GL_TEXTURE1);
     specularTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_S.tga");
-    specularu.setValue(1);
-
+    glBindTexture( GL_TEXTURE_2D, specularTex);
 
     normal->enable();
     position->enable();
