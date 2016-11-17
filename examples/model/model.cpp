@@ -21,7 +21,7 @@
 
 using namespace std;
 //using VertexPNBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPN>;
-using vertex_t = VertexPNT;
+using vertex_t = VertexPNTBTG;
 using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 
 //Some Intialization can only be started after glewInit() and glutInit()
@@ -37,7 +37,7 @@ Attribute * normal, *position ,*uv;
 LuaConfig * config;
 LightList * lights;
 
-GLuint diffuseTex,normalTex,specularTex;
+//GLuint diffuseTex,normalTex,specularTex;
 
 Light * light;
 Timer timer;
@@ -51,8 +51,29 @@ double eye_x,eye_y,eye_z;
 int mouseX,mouseY;
 bool mouseDown,mouseUp;//these two have edge trigger semantics
 bool pressed; //this has level trigger semantic
+void calculateFaceTangent(
+        const Cvec3f &v1, const Cvec3f &v2, const Cvec3f &v3, 
+        const Cvec2f &texCoord1, const Cvec2f &texCoord2,
+        const Cvec2f &texCoord3, Cvec3f &tangent, Cvec3f &binormal) {
+    Cvec3f side0 = v1 - v2;
+    Cvec3f side1 = v3 - v1;
+    Cvec3f normal = cross(side1, side0);
+    normalize(normal);
+    float deltaV0 = texCoord1[1] - texCoord2[1];
+    float deltaV1 = texCoord3[1] - texCoord1[1];
+    tangent = side0 * deltaV1 - side1 * deltaV0;
+    normalize(tangent);
+    float deltaU0 = texCoord1[0] - texCoord2[0];
+    float deltaU1 = texCoord3[0] - texCoord1[0];
+    binormal = side0 * deltaU1 - side1 * deltaU0;
+    normalize(binormal);
+    Cvec3f tangentCross = cross(tangent, binormal);
+    if (dot(tangentCross, normal) < 0.0f) {
+        tangent = tangent * -1;
+    }
 
-void loadObjFile(const char *fileName, std::vector<VertexPNT> &outVertices, std::vector<unsigned short> &outIndices) {
+}
+void loadObjFile(const char *fileName, std::vector<vertex_t> &outVertices, std::vector<unsigned short> &outIndices) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -65,7 +86,7 @@ void loadObjFile(const char *fileName, std::vector<VertexPNT> &outVertices, std:
                 unsigned int vertexOffset = shapes[i].mesh.indices[j].vertex_index * 3;
                 unsigned int normalOffset = shapes[i].mesh.indices[j].normal_index * 3;
                 unsigned int texOffset = shapes[i].mesh.indices[j].texcoord_index * 2;
-                VertexPNT v;
+                vertex_t v;
                 v.p[0] = attrib.vertices[vertexOffset];
                 v.p[1] = attrib.vertices[vertexOffset+1];
                 v.p[2] = attrib.vertices[vertexOffset+2];
@@ -79,6 +100,18 @@ void loadObjFile(const char *fileName, std::vector<VertexPNT> &outVertices, std:
                 outVertices.push_back(v);
                 outIndices.push_back(outVertices.size()-1);
             }
+        }
+        for(unsigned int i=0; i < outVertices.size(); i += 3) {
+            Cvec3f tangent;
+            Cvec3f binormal;
+            calculateFaceTangent(outVertices[i].p, outVertices[i+1].p, outVertices[i+2].p,
+                    outVertices[i].t, outVertices[i+1].t, outVertices[i+2].t, tangent, binormal);
+            outVertices[i].tg = tangent;
+            outVertices[i+1].tg = tangent;
+            outVertices[i+2].tg = tangent;
+            outVertices[i].b = binormal;
+            outVertices[i+1].b = binormal;
+            outVertices[i+2].b = binormal;
         }
     } else {
         std::cout << err << std::endl;
@@ -263,14 +296,20 @@ int main(int argc, char* argv[])
     Uniform1i diffuseu (program,"diffuseTex");
     diffuseu.setValue(0);
     glActiveTexture(GL_TEXTURE0);
-    diffuseTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_D.tga");
+    auto diffuseTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_D.tga");
     glBindTexture( GL_TEXTURE_2D, diffuseTex);
 
     Uniform1i specularu (program, "specularTex");
     specularu.setValue(1);
     glActiveTexture(GL_TEXTURE1);
-    specularTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_S.tga");
+    auto specularTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_S.tga");
     glBindTexture( GL_TEXTURE_2D, specularTex);
+
+    Uniform1i normalu (program, "normalTex");
+    specularu.setValue(2);
+    glActiveTexture(GL_TEXTURE2);
+    auto normalTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_N.tga");
+    glBindTexture( GL_TEXTURE_2D, normalTex);
 
     normal->enable();
     position->enable();
