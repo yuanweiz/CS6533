@@ -42,6 +42,19 @@ struct VertexPN {
 	}
 };
 
+struct VertexPNT {
+    Cvec3f p, n;
+    Cvec2f t;
+    VertexPNT() {}
+    VertexPNT(float x, float y, float z, float nx, float ny, float nz) : p(x,y,z), n(nx, ny, nz) {}
+    VertexPNT& operator = (const GenericVertex& v) {
+        p = v.pos;
+        n = v.normal;
+        t = v.tex;
+        return *this;
+    }
+};
+
 struct VertexPNTBTG {
     Cvec3f p, n, b, tg;
     Cvec2f t;

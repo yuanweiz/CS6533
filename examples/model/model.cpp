@@ -15,9 +15,14 @@
 #include "Light.h"
 #include <iterator>
 #include <math.h>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 using namespace std;
 //using VertexPNBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPN>;
-using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPNTBTG>;
+using vertex_t = VertexPNT;
+using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 
 //Some Intialization can only be started after glewInit() and glutInit()
 //are called, so I can't put these objects into global static scope.
@@ -28,10 +33,11 @@ VertexPNTBTGBuffer *vbo;
 IndexBuffer * ibo;
 Program* program;
 UniformMatrix4fv *modelView, *projection, *normalMat;
-Uniform3f *color;
-Attribute * normal, *position;
+Attribute * normal, *position ,*uv;
 LuaConfig * config;
 LightList * lights;
+
+GLuint diffuseTex,normalTex,specularTex;
 
 Light * light;
 Timer timer;
@@ -45,6 +51,41 @@ double eye_x,eye_y,eye_z;
 int mouseX,mouseY;
 bool mouseDown,mouseUp;//these two have edge trigger semantics
 bool pressed; //this has level trigger semantic
+
+void loadObjFile(const char *fileName, std::vector<VertexPNT> &outVertices, std::vector<unsigned short> &outIndices) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fileName, NULL, true);
+    bool hasTex = !attrib.texcoords.empty();
+    if(ret) {
+        for(unsigned int i=0; i < shapes.size(); i++) {
+            for(unsigned int j=0; j < shapes[i].mesh.indices.size(); j++) {
+                unsigned int vertexOffset = shapes[i].mesh.indices[j].vertex_index * 3;
+                unsigned int normalOffset = shapes[i].mesh.indices[j].normal_index * 3;
+                unsigned int texOffset = shapes[i].mesh.indices[j].texcoord_index * 2;
+                VertexPNT v;
+                v.p[0] = attrib.vertices[vertexOffset];
+                v.p[1] = attrib.vertices[vertexOffset+1];
+                v.p[2] = attrib.vertices[vertexOffset+2];
+                v.n[0] = attrib.normals[normalOffset];
+                v.n[1] = attrib.normals[normalOffset+1];
+                v.n[2] = attrib.normals[normalOffset+2];
+                if (hasTex){
+                    v.t[0] = attrib.texcoords[texOffset];
+                    v.t[1] = 1.0-attrib.texcoords[texOffset+1];
+                }
+                outVertices.push_back(v);
+                outIndices.push_back(outVertices.size()-1);
+            }
+        }
+    } else {
+        std::cout << err << std::endl;
+        assert(false);
+    }
+}
+
 
 void mouseClick(int /*button*/,int state,int /*x*/,int/* y*/){
     if(state == GLUT_UP){
@@ -117,8 +158,9 @@ void drawCube(const Matrix4& modelMatrix_ ){
     //draw
     vbo->bind();
 #define offset(T,e) ((void*)&(((T*)0)->e))
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPNTBTG), offset(VertexPNTBTG,p));
-    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(VertexPNTBTG), offset(VertexPNTBTG,n));
+    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
+    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
+    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
 #undef offset
     ibo->bind();
     glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
@@ -127,31 +169,10 @@ void drawCube(const Matrix4& modelMatrix_ ){
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     double rotSpeed = config->getDouble("rotSpeed");
     double angle=rotSpeed*timer.runningTime()/1000000;
-    //main object modelView
     Matrix4 mv = Matrix4::makeZRotation(angle) ;
-    color->setValue(1.0,1.0,.0);//yellow
     drawCube(mv);
-
-    //subobject1
-    Matrix4 t1 = Matrix4::makeTranslation(Cvec3(.0,.0,-3.0));
-    auto mv1 = t1 * mv;
-    color->setValue(1.0,.0,.0);//red
-    drawCube(mv1);
-
-    //subobject2
-    Matrix4 t2 = Matrix4::makeTranslation(Cvec3(.0,2.0*sin(angle),-3.0));
-    auto mv2 = t2 * mv1;
-    color->setValue(.0,1.0,.0);//green
-    drawCube(mv2);
-
-    //subobject3
-    Matrix4 t3 = Matrix4::makeTranslation(Cvec3(2.0*cos(angle),0,-3.0));
-    auto mv3 = t3 * mv2;
-    color->setValue(.0,.0,1.0);//blue
-    drawCube(mv3);
 	glutSwapBuffers();
 }
 
@@ -191,25 +212,24 @@ int main(int argc, char* argv[])
 {
     init(&argc,argv);
     //on-stack objects, won't be disposed until program ends
-//#define ptr_to_stack(ptr,ctor) auto ptr##_ =(ctor);//ptr=& ptr##_ ;
+    //#define ptr_to_stack(ptr,ctor) auto ptr##_ =(ctor);//ptr=& ptr##_ ;
     Program program_( CURRENT_DIR "/vertex.glsl",CURRENT_DIR "/fragment.glsl");
     LuaConfig config_(CURRENT_DIR "/config.lua");
     Attribute position_( &program_,"position");
     Attribute normal_( &program_,"normal");
+    Attribute uv_( &program_,"uv");
     UniformMatrix4fv modelView_(&program_, "mvm"),
         projection_(&program_,"p"),
         normalMat_(&program_,"normalMat");
-    Uniform3f color_(&program_,"uColor");
     LightList lightList_(&program_,"lights",10);
 
 
-    int nvtx,nidx;
-    getCubeVbIbLen(nvtx,nidx);
-
-    std::vector<VertexPNTBTG>verts(nvtx);
-    //std::vector<VertexPN>verts(nvtx);
-    std::vector<unsigned short>indices(nidx);
-    makeCube(2.0,verts.begin(),indices.begin());
+    std::vector<vertex_t>verts;
+    std::vector<unsigned short>indices;
+    loadObjFile( 
+            "/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_Giveaway.obj",
+            verts,indices);
+    
     
     VertexPNTBTGBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
@@ -217,16 +237,17 @@ int main(int argc, char* argv[])
     program = &program_;
     position = &position_;
     normal = &normal_;
+    uv =&uv_;
     modelView = &modelView_;
     projection = &projection_;
     normalMat = & normalMat_;
     vbo = &vbo_;
     ibo = &ibo_;
     config = &config_;
-    color = &color_;
     lights = & lightList_;
 
     program->useThis();
+
     lightList_[0].setPosition(-5.f,-5.f,-5.f);
     lightList_[0].setDiffuseColor(1.0f,1.0f,0.f);
     lightList_[0].setSpecularColor(1.0f,1.0f,0.f);
@@ -234,9 +255,19 @@ int main(int argc, char* argv[])
     lightList_[1].setSpecularColor(1.0f,.0f,1.f);
     lightList_[1].setSpecularColor(1.0f,.0f,1.f);
 
+    Uniform1i diffuseu (program,"diffuseTex");
+    glActiveTexture(GL_TEXTURE0);
+    diffuseTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_D.tga");
+    diffuseu.setValue(0);
+    Uniform1i specularu (program, "specularTex");
+    glActiveTexture(GL_TEXTURE1);
+    specularTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_S.tga");
+    specularu.setValue(1);
+
 
     normal->enable();
     position->enable();
+    uv->enable();
     timer.start();
     glutMainLoop();
 	return 0;

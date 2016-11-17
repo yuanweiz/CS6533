@@ -5,6 +5,7 @@
 #include "Noncopyable.h"
 #include "Program.h"
 #include <assert.h>
+#include <cstdio>
 template <typename T>
 class Uniform {
     public:
@@ -21,7 +22,10 @@ class Uniform {
         void setValue(Args...args){
             static_cast<T*>(this)->func_(handle_,args...);
             auto err = glGetError();
-            assert(err==0); (void)err;
+            if (err!=0){
+                printf("%d ",err);
+                assert(false);
+            }
     }
     protected:
     const GLuint handle_;
@@ -44,6 +48,7 @@ UNIFORM_DECLARE_TYPE(Uniform1d,glUniform1d);
 UNIFORM_DECLARE_TYPE(Uniform2d,glUniform2d);
 UNIFORM_DECLARE_TYPE(Uniform3d,glUniform3d);
 UNIFORM_DECLARE_TYPE(Uniform4d,glUniform4d);
+UNIFORM_DECLARE_TYPE(Uniform1i,glUniform1i);
 UNIFORM_DECLARE_TYPE(UniformMatrix4fv,glUniformMatrix4fv);
 
 //class Uniform1f : public Uniform<Uniform1f> {
