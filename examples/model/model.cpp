@@ -11,11 +11,11 @@
 #include "LuaConfig.h"
 #include "Attribute.h"
 
-#include "Timer.h"
 #include "Light.h"
 #include <iterator>
 #include <math.h>
 
+#include <memory>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -29,18 +29,17 @@ using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 //One possible workaround is to use
 //global pointers to main()'s on-stack objects, which won't be disposed
 //until the whole program exits.
-VertexPNTBTGBuffer *vbo;
-IndexBuffer * ibo;
+VertexPNTBTGBuffer *vbo, *floorvbo;
+IndexBuffer * ibo, *flooribo;
 Program* program;
 UniformMatrix4fv *modelView, *projection, *normalMat;
-Attribute * normal, *position ,*uv;
+Attribute * normal, *position ,*uv, *tangent, *binormal, *floorUV, *floorNormal;
 LuaConfig * config;
 LightList * lights;
 
 //GLuint diffuseTex,normalTex,specularTex;
 
 Light * light;
-Timer timer;
 
 //Arcball related
 
@@ -71,8 +70,8 @@ void calculateFaceTangent(
     if (dot(tangentCross, normal) < 0.0f) {
         tangent = tangent * -1;
     }
-
 }
+
 void loadObjFile(const char *fileName, std::vector<vertex_t> &outVertices, std::vector<unsigned short> &outIndices) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -119,6 +118,13 @@ void loadObjFile(const char *fileName, std::vector<vertex_t> &outVertices, std::
     }
 }
 
+void setUniformToTexture2D (Program * p, const char* imgPath, const char* uniformName,GLuint texUnit){
+    Uniform1i diffuseu (p,uniformName);
+    diffuseu.setValue(texUnit);
+    glActiveTexture(GL_TEXTURE0 + texUnit);
+    auto tex = loadGLTexture(imgPath);
+    glBindTexture( GL_TEXTURE_2D, tex);
+}
 
 void mouseClick(int /*button*/,int state,int /*x*/,int/* y*/){
     if(state == GLUT_UP){
@@ -161,8 +167,8 @@ void idle(){
     glutPostRedisplay();
 }
 
-void drawCube(const Matrix4& modelMatrix_ ){
-    Matrix4 modelMatrix = Matrix4( rotWorld*world*modelMatrix_);
+void drawModel ( ){
+    Matrix4 modelMatrix = Matrix4( rotWorld*world);
     float colMajorMat[16];
     static LuaTable luaProjection = config->getLuaTable("projection"),
                     luaEyePosition = config->getLuaTable("eye");
@@ -188,24 +194,29 @@ void drawCube(const Matrix4& modelMatrix_ ){
     n.writeToColumnMajorMatrix(colMajorMat);
     normalMat->setValue(1,false,colMajorMat);
 
+#define offset(T,e) ((void*)&(((T*)0)->e))
     //draw
     vbo->bind();
-#define offset(T,e) ((void*)&(((T*)0)->e))
+    ibo->bind();
     glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
     glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
     glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
-#undef offset
-    ibo->bind();
+    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
+    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
     glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
+    
+    //floorvbo->bind();
+    //flooribo->bind();
+    //glVertexAttribPointer(floorNormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
+    //glVertexAttribPointer(floorUV->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
+    //glDrawElements(GL_TRIANGLES,flooribo->size(),GL_UNSIGNED_SHORT,0);
+#undef offset
 }
 
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //double rotSpeed = config->getDouble("rotSpeed");
-    double angle=0;//rotSpeed*timer.runningTime()/1000000;
-    Matrix4 mv = Matrix4::makeZRotation(angle) ;
-    drawCube(mv);
+    drawModel();
 	glutSwapBuffers();
 }
 
@@ -237,7 +248,8 @@ void init(int *argc, char* argv[])
     //glDepthFunc(GL_LESS);
     glReadBuffer(GL_FRONT);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glClearColor(0.3,0.3,0.3,1.);
+    //glClearColor(0.3,0.3,0.3,1.);
+    glClearColor(0.,0.,0.,1.);
     glewInit();
 }
 
@@ -251,12 +263,20 @@ int main(int argc, char* argv[])
     Attribute position_( &program_,"position");
     Attribute normal_( &program_,"normal");
     Attribute uv_( &program_,"uv");
+    Attribute tangent_( &program_,"tangent");
+    Attribute binormal_( &program_,"binormal");
+    //Attribute floorNormal_( &program_,"floorNormal");
+    //Attribute floorUV_( &program_,"flooruv");
+    //assert(!glGetError());
+
     UniformMatrix4fv modelView_(&program_, "mvm"),
         projection_(&program_,"p"),
         normalMat_(&program_,"normalMat");
+
     LightList lightList_(&program_,"lights",10);
 
 
+    //Monk
     std::vector<vertex_t>verts;
     std::vector<unsigned short>indices;
     loadObjFile( 
@@ -268,11 +288,25 @@ int main(int argc, char* argv[])
     
     VertexPNTBTGBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
+
+    //floor related
+    //int vbLen,ibLen;
+    //getPlaneVbIbLen( vbLen,  ibLen) ;
+    //std::vector<vertex_t> floorVerts(vbLen);
+    //std::vector<unsigned short> floorIndices(ibLen);
+    //makePlane(2.0,floorVerts.begin(),floorIndices.begin());
+    //VertexPNTBTGBuffer floorvbo_(floorVerts.data(),floorVerts.size());
+    //IndexBuffer flooribo_(floorIndices.data(),floorVerts.size());
     
     program = &program_;
     position = &position_;
     normal = &normal_;
     uv =&uv_;
+    tangent = & tangent_;
+    binormal = &binormal_;
+    //floorUV = & floorUV_;
+    //floorNormal = &floorNormal_;
+
     modelView = &modelView_;
     projection = &projection_;
     normalMat = & normalMat_;
@@ -287,34 +321,21 @@ int main(int argc, char* argv[])
     lightList_[0].setDiffuseColor(1.0f,1.0f,1.f);
     lightList_[0].setSpecularColor(1.0f,1.0f,1.f);
     lightList_[1].setPosition(4.f,4.f,-4.f);
+    lightList_[1].setDiffuseColor(1.0f,1.0f,1.f);
     lightList_[1].setSpecularColor(1.0f,1.0f,1.f);
-    lightList_[1].setSpecularColor(1.0f,1.0f,1.f);
+    lightList_[2].setPosition(-5.f,5.f,-5.f);
+    lightList_[2].setDiffuseColor(1.0f,.0f,1.f);
+    lightList_[2].setSpecularColor(1.0f,.0f,1.f);
 
     //glActiveTexture sets the current active texture unit(GL_TEXTUREi)
     //for each texture unit, it has GL_TEXTURE_2D GL_TEXTURE_3D, etc.
-    //
-    Uniform1i diffuseu (program,"diffuseTex");
-    diffuseu.setValue(0);
-    glActiveTexture(GL_TEXTURE0);
-    auto diffuseTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_D.tga");
-    glBindTexture( GL_TEXTURE_2D, diffuseTex);
+    //I think this global state machine designe really increase the chance of
+    //making mistakes!
+    setUniformToTexture2D (program, CURRENT_DIR "/Monk_D.tga","diffuseTex" ,0);
+    setUniformToTexture2D (program, CURRENT_DIR "/Monk_S.tga","specularTex" ,1);
+    setUniformToTexture2D (program, CURRENT_DIR "/Monk_N.tga","normalTex" ,2);
+    //setUniformToTexture2D (program, CURRENT_DIR "/floor.jpg","floorTex" ,3);
 
-    Uniform1i specularu (program, "specularTex");
-    specularu.setValue(1);
-    glActiveTexture(GL_TEXTURE1);
-    auto specularTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_S.tga");
-    glBindTexture( GL_TEXTURE_2D, specularTex);
-
-    Uniform1i normalu (program, "normalTex");
-    specularu.setValue(2);
-    glActiveTexture(GL_TEXTURE2);
-    auto normalTex = loadGLTexture("/data/code/interactive_computer_graphics/3d_models/Monk_Giveaway/Monk_N.tga");
-    glBindTexture( GL_TEXTURE_2D, normalTex);
-
-    normal->enable();
-    position->enable();
-    uv->enable();
-    timer.start();
     glutMainLoop();
 	return 0;
 }

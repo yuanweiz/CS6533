@@ -4,6 +4,9 @@ attribute vec2 uv;
 attribute vec4 tangent;
 attribute vec4 binormal;
 
+attribute vec4 flooruv;
+attribute vec4 floorNormal;
+
 varying mat3 varyingTBNMatrix;
 varying vec3 varyingPosition;
 varying vec2 varyingUv;
