@@ -12,6 +12,7 @@
 #include "Attribute.h"
 
 #include "Light.h"
+#include "Timer.h"
 #include <iterator>
 #include <math.h>
 
@@ -29,13 +30,13 @@ using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 //One possible workaround is to use
 //global pointers to main()'s on-stack objects, which won't be disposed
 //until the whole program exits.
+Timer t;
 VertexPNTBTGBuffer *vbo, *floorvbo;
 IndexBuffer * ibo, *flooribo;
 Program* program;
 UniformMatrix4fv *modelView, *projection, *normalMat;
 Attribute * normal, *position ,*uv, *tangent, *binormal, *floorUV, *floorNormal;
 LuaConfig * config;
-LightList * lights;
 
 //GLuint diffuseTex,normalTex,specularTex;
 
@@ -197,19 +198,22 @@ void drawModel ( ){
 #define offset(T,e) ((void*)&(((T*)0)->e))
     //draw
     vbo->bind();
-    ibo->bind();
     glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
     glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
     glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
     glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
     glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
+    ibo->bind();
     glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
     
-    //floorvbo->bind();
-    //flooribo->bind();
-    //glVertexAttribPointer(floorNormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
-    //glVertexAttribPointer(floorUV->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
-    //glDrawElements(GL_TRIANGLES,flooribo->size(),GL_UNSIGNED_SHORT,0);
+    floorvbo->bind();
+    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
+    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
+    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
+    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
+    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
+    flooribo->bind();
+    glDrawElements(GL_TRIANGLES,flooribo->size()*0+6,GL_UNSIGNED_SHORT,(void*)(0+24));
 #undef offset
 }
 
@@ -245,10 +249,8 @@ void init(int *argc, char* argv[])
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GREATER);
     glClearDepth( -100.0);
-    //glDepthFunc(GL_LESS);
     glReadBuffer(GL_FRONT);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    //glClearColor(0.3,0.3,0.3,1.);
     glClearColor(0.,0.,0.,1.);
     glewInit();
 }
@@ -290,13 +292,18 @@ int main(int argc, char* argv[])
     IndexBuffer ibo_(indices.data(),indices.size());
 
     //floor related
-    //int vbLen,ibLen;
-    //getPlaneVbIbLen( vbLen,  ibLen) ;
-    //std::vector<vertex_t> floorVerts(vbLen);
-    //std::vector<unsigned short> floorIndices(ibLen);
-    //makePlane(2.0,floorVerts.begin(),floorIndices.begin());
-    //VertexPNTBTGBuffer floorvbo_(floorVerts.data(),floorVerts.size());
-    //IndexBuffer flooribo_(floorIndices.data(),floorVerts.size());
+    int vbLen,ibLen;
+    getCubeVbIbLen( vbLen,  ibLen) ;
+    std::vector<vertex_t> floorVerts(vbLen);
+    std::vector<unsigned short> floorIndices(ibLen);
+    makeCube(6.0,floorVerts.begin(),floorIndices.begin());
+    for (auto & v : floorVerts){
+        v.p[1]-=3.0;
+    }
+    //floorVerts = vector<vertex_t> (floorVerts.begin()+8,floorVerts.begin()+12);
+    //floorIndices = vector<unsigned short> (floorIndices.begin()+12, floorIndices.begin()+18);
+    VertexPNTBTGBuffer floorvbo_(floorVerts.data(),floorVerts.size());
+    IndexBuffer flooribo_(floorIndices.data(),floorVerts.size());
     
     program = &program_;
     position = &position_;
@@ -312,20 +319,21 @@ int main(int argc, char* argv[])
     normalMat = & normalMat_;
     vbo = &vbo_;
     ibo = &ibo_;
+    flooribo = & flooribo_;
+    floorvbo = & floorvbo_;
     config = &config_;
-    lights = & lightList_;
 
     program->useThis();
 
-    lightList_[0].setPosition(-5.f,-5.f,-5.f);
-    lightList_[0].setDiffuseColor(1.0f,1.0f,1.f);
+    lightList_[0].setPosition(-15.f,15.f,-5.f);
+    lightList_[0].setDiffuseColor(.0f,0.4f,0.f);
     lightList_[0].setSpecularColor(1.0f,1.0f,1.f);
-    lightList_[1].setPosition(4.f,4.f,-4.f);
-    lightList_[1].setDiffuseColor(1.0f,1.0f,1.f);
-    lightList_[1].setSpecularColor(1.0f,1.0f,1.f);
-    lightList_[2].setPosition(-5.f,5.f,-5.f);
-    lightList_[2].setDiffuseColor(1.0f,.0f,1.f);
-    lightList_[2].setSpecularColor(1.0f,.0f,1.f);
+    lightList_[1].setPosition(14.f,14.f,-4.f);
+    lightList_[1].setDiffuseColor(1.0f,.0f,0.f);
+    lightList_[1].setSpecularColor(.0f,.0f,0.f);
+    lightList_[2].setPosition(-0.f,15.f,-0.f);
+    lightList_[2].setDiffuseColor(.0f,.0f,.0f);
+    lightList_[2].setSpecularColor(1.0f,1.0f,1.f);
 
     //glActiveTexture sets the current active texture unit(GL_TEXTUREi)
     //for each texture unit, it has GL_TEXTURE_2D GL_TEXTURE_3D, etc.
@@ -336,6 +344,7 @@ int main(int argc, char* argv[])
     setUniformToTexture2D (program, CURRENT_DIR "/Monk_N.tga","normalTex" ,2);
     //setUniformToTexture2D (program, CURRENT_DIR "/floor.jpg","floorTex" ,3);
 
+    t.start();
     glutMainLoop();
 	return 0;
 }
