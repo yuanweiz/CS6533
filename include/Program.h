@@ -3,14 +3,24 @@
 #include <GL/glew.h>
 #include "Noncopyable.h"
 #include "Error.h"
+#include <string>
 // Light wrapper around GLSL program handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
+
+class VertexBuffer;
+class IndexBuffer;
 class Program : Noncopyable {
 protected:
   GLuint handle_;
+  //GLuint vbo_,ibo_;
+  VertexBuffer * vbo_;
+  IndexBuffer * ibo_;
+  std::string name_;
 
 public:
-  Program(const char* vs, const char *fs); 
+  Program(const char* vs, const char *fs,
+          VertexBuffer* vbo, IndexBuffer*ibo,
+          const std::string& name = "shader program"); 
 
   ~Program() {
     glDeleteProgram(handle_);
@@ -26,6 +36,7 @@ public:
   }
 
   GLuint get(){return handle_;}
+
 
 };
 #endif// __PROGRAM_H

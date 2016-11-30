@@ -31,11 +31,10 @@ using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 //global pointers to main()'s on-stack objects, which won't be disposed
 //until the whole program exits.
 Timer t;
-VertexPNTBTGBuffer *vbo, *floorvbo;
+VertexBuffer *vbo, *floorvbo;
 IndexBuffer * ibo, *flooribo;
 Program* program;
 UniformMatrix4fv *modelView, *projection, *normalMat;
-Attribute * normal, *position ,*uv, *tangent, *binormal, *floorUV, *floorNormal;
 LuaConfig * config;
 
 //GLuint diffuseTex,normalTex,specularTex;
@@ -195,26 +194,12 @@ void drawModel ( ){
     n.writeToColumnMajorMatrix(colMajorMat);
     normalMat->setValue(1,false,colMajorMat);
 
-#define offset(T,e) ((void*)&(((T*)0)->e))
     //draw
     vbo->bind();
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
-    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
-    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
-    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
-    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
+    vbo->setAttributePointers();
     ibo->bind();
     glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
     
-    floorvbo->bind();
-    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
-    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
-    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
-    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
-    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
-    flooribo->bind();
-    glDrawElements(GL_TRIANGLES,flooribo->size()*0+6,GL_UNSIGNED_SHORT,(void*)(0+24));
-#undef offset
 }
 
 void display(void)
@@ -258,26 +243,6 @@ void init(int *argc, char* argv[])
 int main(int argc, char* argv[])
 {
     init(&argc,argv);
-    //on-stack objects, won't be disposed until program ends
-    //#define ptr_to_stack(ptr,ctor) auto ptr##_ =(ctor);//ptr=& ptr##_ ;
-    Program program_( CURRENT_DIR "/vertex.glsl",CURRENT_DIR "/fragment.glsl");
-    LuaConfig config_(CURRENT_DIR "/config.lua");
-    Attribute position_( &program_,"position");
-    Attribute normal_( &program_,"normal");
-    Attribute uv_( &program_,"uv");
-    Attribute tangent_( &program_,"tangent");
-    Attribute binormal_( &program_,"binormal");
-    //Attribute floorNormal_( &program_,"floorNormal");
-    //Attribute floorUV_( &program_,"flooruv");
-    //assert(!glGetError());
-
-    UniformMatrix4fv modelView_(&program_, "mvm"),
-        projection_(&program_,"p"),
-        normalMat_(&program_,"normalMat");
-
-    LightList lightList_(&program_,"lights",10);
-
-
     //Monk
     std::vector<vertex_t>verts;
     std::vector<unsigned short>indices;
@@ -288,39 +253,45 @@ int main(int argc, char* argv[])
         v.p = v.p *0.05;
     }
     
-    VertexPNTBTGBuffer vbo_(verts.data(),verts.size());
+    VertexBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
 
-    //floor related
-    int vbLen,ibLen;
-    getCubeVbIbLen( vbLen,  ibLen) ;
-    std::vector<vertex_t> floorVerts(vbLen);
-    std::vector<unsigned short> floorIndices(ibLen);
-    makeCube(6.0,floorVerts.begin(),floorIndices.begin());
-    for (auto & v : floorVerts){
-        v.p[1]-=3.0;
+
+//    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
+//    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
+//    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
+//    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
+//    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
+
+    Program program_( CURRENT_DIR "/vertex.glsl",CURRENT_DIR "/fragment.glsl",
+            &vbo_,&ibo_);
+    LuaConfig config_(CURRENT_DIR "/config.lua");
+#define offset(T,e) ((void*)&(((T*)0)->e))
+    {
+        //RAII
+        Attribute position_( &program_,&vbo_,"position",3,offset(vertex_t,p));
+        Attribute normal_( &program_,&vbo_,"normal",3,offset(vertex_t,n));
+        Attribute uv_( &program_,&vbo_,"uv",2,offset(vertex_t,t));
+        Attribute tangent_( &program_,&vbo_,"tangent",3,offset(vertex_t,tg));
+        Attribute binormal_( &program_,&vbo_,"binormal",3,offset(vertex_t,b));
     }
-    //floorVerts = vector<vertex_t> (floorVerts.begin()+8,floorVerts.begin()+12);
-    //floorIndices = vector<unsigned short> (floorIndices.begin()+12, floorIndices.begin()+18);
-    VertexPNTBTGBuffer floorvbo_(floorVerts.data(),floorVerts.size());
-    IndexBuffer flooribo_(floorIndices.data(),floorVerts.size());
+
+#undef offset
+    UniformMatrix4fv modelView_(&program_, "mvm"),
+        projection_(&program_,"p"),
+        normalMat_(&program_,"normalMat");
+
+    LightList lightList_(&program_,"lights",10);
+
+
     
     program = &program_;
-    position = &position_;
-    normal = &normal_;
-    uv =&uv_;
-    tangent = & tangent_;
-    binormal = &binormal_;
-    //floorUV = & floorUV_;
-    //floorNormal = &floorNormal_;
 
     modelView = &modelView_;
     projection = &projection_;
     normalMat = & normalMat_;
     vbo = &vbo_;
     ibo = &ibo_;
-    flooribo = & flooribo_;
-    floorvbo = & floorvbo_;
     config = &config_;
 
     program->useThis();

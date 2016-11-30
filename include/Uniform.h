@@ -6,14 +6,20 @@
 #include "Program.h"
 #include <assert.h>
 #include <cstdio>
+#include "Wrapper.h"
+#include <string>
+#include <stdexcept>
 template <typename T>
 class Uniform {
     public:
     Uniform(Program * program, const char* name)
-        :handle_(program->getUniform(name))
+        :handle_(program->getUniform(name)), program_(program),
+        name_(name)
     {
         if (handle_ == static_cast<GLuint>(-1)){
-            assert(false);
+            char buf[128];
+            snprintf(buf,sizeof(buf),"Can't find uniform location of %s",name);
+            throw std::runtime_error(buf);
         }
     }
     Uniform(const Uniform &)=default;
@@ -21,14 +27,18 @@ class Uniform {
     template <typename ... Args>
         void setValue(Args...args){
             static_cast<T*>(this)->func_(handle_,args...);
-            auto err = glGetError();
-            if (err!=0){
-                printf("%d ",err);
-                assert(false);
-            }
+            assert(program_->get() == ogl::getCurrentProgram());
+            auto err = glGetError(); (void) err;
+            //if (err!=0){
+            //    char buf[128];
+            //    snprintf(buf,sizeof(buf),"Can't find uniform location of %s",name_.c_str());
+            //    throw std::runtime_error(buf);
+            //}
     }
     protected:
     const GLuint handle_;
+    Program * program_;
+    std::string name_;
 };
 
 #define UNIFORM_DECLARE_TYPE(name,func)\

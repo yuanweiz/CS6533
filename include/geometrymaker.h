@@ -30,6 +30,20 @@ struct GenericVertex {
     : pos(x,y,z), normal(nx,ny,nz), tex(tu, tv), tangent(tx, ty, tz), binormal(bx, by, bz)
   {}
 };
+struct VertexPNTBTG {
+    Cvec3f p, n, b, tg;
+    Cvec2f t;
+    VertexPNTBTG() {}
+    VertexPNTBTG(float x, float y, float z, float nx, float ny, float nz) : p(x,y,z), n(nx, ny, nz) {}
+    VertexPNTBTG& operator = (const GenericVertex& v) {
+        p = v.pos;
+        n = v.normal;
+        t = v.tex;
+        b = v.binormal;
+        tg = v.tangent;
+        return *this;
+    }
+};
 struct VertexPN {
 	Cvec3f p, n;
 	VertexPN() {}

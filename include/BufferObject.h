@@ -5,9 +5,12 @@
 #include "Error.h"
 #include <cstddef>
 #include "Program.h"
+
+#include "geometrymaker.h"
 // Light wrapper around a GL buffer object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 
+class Attribute;
 namespace detail{
 template <int BUFFER,typename T>
 class GlBufferObject : Noncopyable {
@@ -16,8 +19,7 @@ protected:
   size_t size_;
 
 public:
-  //GlBufferObject():handle_(0){}
-  //void init(T *data, size_t size){
+  typedef T data_type;
   GlBufferObject (T*data, size_t sz){
       size_ = sz;
       glGenBuffers(1, &handle_);
@@ -38,9 +40,30 @@ public:
 };
 }
 
-struct VertexPN; //forward declaration
-typedef detail::GlBufferObject<GL_ARRAY_BUFFER, GLfloat> VertexBuffer;
-typedef detail::GlBufferObject<GL_ARRAY_BUFFER, VertexPN> VertexPNBuffer;
-typedef detail::GlBufferObject<GL_ELEMENT_ARRAY_BUFFER, unsigned short> IndexBuffer;
+class IndexBuffer :
+    public detail::GlBufferObject
+    <GL_ELEMENT_ARRAY_BUFFER, unsigned short> {
+        using Base = detail::GlBufferObject<
+            GL_ELEMENT_ARRAY_BUFFER, unsigned short>;
+        public:
+        IndexBuffer(unsigned short *data,size_t sz)
+            :Base(data,sz){}
+    };
+class VertexBuffer : public detail::GlBufferObject<GL_ARRAY_BUFFER, VertexPNTBTG> {
+    public:
+        using Base=detail::GlBufferObject<GL_ARRAY_BUFFER,
+              VertexPNTBTG>;
+        using Base::data_type;
+        VertexBuffer( data_type *data,size_t sz)
+            :Base(data,sz)
+        {
+        }
+    void addAttribute(const Attribute& attrib){
+        attributes_.push_back(attrib); //copy semantic
+    }
+    void setAttributePointers();
+    private:
+    std::vector<Attribute> attributes_;
+};
 
 #endif //__BUFFER_OBJECT_H
