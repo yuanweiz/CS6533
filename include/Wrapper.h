@@ -2,10 +2,10 @@
 #define __WRAPPER_H
 #include <GL/glew.h>
 namespace ogl{
-    inline GLint getCurrentProgram(){
+    inline GLuint getCurrentProgram(){
         GLint ret;
         glGetIntegerv(GL_CURRENT_PROGRAM, &ret);
-        return ret;
+        return (GLuint)ret;
     }
 
     inline GLuint getCurrentArrayBuffer(){

@@ -29,11 +29,6 @@ class Uniform {
             static_cast<T*>(this)->func_(handle_,args...);
             assert(program_->get() == ogl::getCurrentProgram());
             auto err = glGetError(); (void) err;
-            //if (err!=0){
-            //    char buf[128];
-            //    snprintf(buf,sizeof(buf),"Can't find uniform location of %s",name_.c_str());
-            //    throw std::runtime_error(buf);
-            //}
     }
     protected:
     const GLuint handle_;
@@ -60,11 +55,5 @@ UNIFORM_DECLARE_TYPE(Uniform3d,glUniform3d);
 UNIFORM_DECLARE_TYPE(Uniform4d,glUniform4d);
 UNIFORM_DECLARE_TYPE(Uniform1i,glUniform1i);
 UNIFORM_DECLARE_TYPE(UniformMatrix4fv,glUniformMatrix4fv);
-
-//class Uniform1f : public Uniform<Uniform1f> {
-//    public:
-//    Uniform1f(GLuint handle):Uniform<Uniform1f>(handle){}
-//    const static decltype(glUniform1f) func_;
-//};
 
 #endif// __UNIFORM_H

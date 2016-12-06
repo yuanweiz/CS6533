@@ -21,9 +21,7 @@
 #include "tiny_obj_loader.h"
 
 using namespace std;
-//using VertexPNBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,VertexPN>;
 using vertex_t = VertexPNTBTG;
-using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 
 //Some Intialization can only be started after glewInit() and glutInit()
 //are called, so I can't put these objects into global static scope.
@@ -33,10 +31,10 @@ using VertexPNTBTGBuffer = detail::GlBufferObject<GL_ARRAY_BUFFER,vertex_t>;
 Timer t;
 VertexBuffer *vbo, *floorvbo;
 IndexBuffer * ibo, *flooribo;
-Program* program;
+Program* program, *id;
 UniformMatrix4fv *modelView, *projection, *normalMat;
 LuaConfig * config;
-
+FrameBuffer * fb;
 //GLuint diffuseTex,normalTex,specularTex;
 
 Light * light;
@@ -168,6 +166,11 @@ void idle(){
 }
 
 void drawModel ( ){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    fb->bind();
+    program->useThis();
+    glViewport(0,0,w,h);
+
     Matrix4 modelMatrix = Matrix4( rotWorld*world);
     float colMajorMat[16];
     static LuaTable luaProjection = config->getLuaTable("projection"),
@@ -199,12 +202,18 @@ void drawModel ( ){
     vbo->setAttributePointers();
     ibo->bind();
     glDrawElements(GL_TRIANGLES,ibo->size(),GL_UNSIGNED_SHORT,0);
+
+    //now draw it to screen;
+    glBindFramebuffer(GL_FRAMEBUFFER,0);
+    id->useThis();
+    glViewport(0,0,1024,1024);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLES,0,6);
     
 }
 
 void display(void)
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawModel();
 	glutSwapBuffers();
 }
@@ -212,7 +221,6 @@ void display(void)
 void reshape(int _w,int _h){
     w=_w;
     h=_h;
-    glViewport(0,0,w,h);
 }
 
 void init(int *argc, char* argv[])
@@ -256,27 +264,53 @@ int main(int argc, char* argv[])
     VertexBuffer vbo_(verts.data(),verts.size());
     IndexBuffer ibo_(indices.data(),indices.size());
 
-
-//    glVertexAttribPointer(position->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,p));
-//    glVertexAttribPointer(normal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,n));
-//    glVertexAttribPointer(uv->get(), 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,t));
-//    glVertexAttribPointer(tangent->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,tg));
-//    glVertexAttribPointer(binormal->get(), 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), offset(vertex_t,b));
-
     Program program_( CURRENT_DIR "/vertex.glsl",CURRENT_DIR "/fragment.glsl",
             &vbo_,&ibo_);
+
+    // vertex and texture coordinate
+    struct uvxy {
+        Cvec2f uv;
+        Cvec2f xy;
+        uvxy(float u,float v,float x,float y):
+            uv(u,v),xy(x,y)
+        {
+        }
+    };
+    uvxy uv[] = {
+        //uv
+        {1.0f, 1.0f, 1.0f, 1.0f},  
+        {1.0f, 0.0f, 1.0f, -1.0f}, 
+        {0.0f, 0.0f, -1.0f, -1.0f},
+        {0.0f,0.0f, -1.0f, -1.0f},
+        {0.0f,1.0f, -1.0f, 1.0f}, 
+        {1.0f,1.0f, 1.0f, 1.0f}   
+    }; 
+    std::vector<unsigned short> indices_id;
+    VertexBuffer id_vbo (uv,6);
+    Program id( CURRENT_DIR "/id_vertex.glsl",CURRENT_DIR "/id_fragment.glsl",
+            &id_vbo,NULL);
+    
     LuaConfig config_(CURRENT_DIR "/config.lua");
 #define offset(T,e) ((void*)&(((T*)0)->e))
-    {
-        //RAII
-        Attribute position_( &program_,&vbo_,"position",3,offset(vertex_t,p));
-        Attribute normal_( &program_,&vbo_,"normal",3,offset(vertex_t,n));
-        Attribute uv_( &program_,&vbo_,"uv",2,offset(vertex_t,t));
-        Attribute tangent_( &program_,&vbo_,"tangent",3,offset(vertex_t,tg));
-        Attribute binormal_( &program_,&vbo_,"binormal",3,offset(vertex_t,b));
-    }
+    vbo_.addAttribute( &program_, "position",3,offset(vertex_t,p));
+    vbo_.addAttribute( &program_, "normal",3,offset(vertex_t,n));
+    vbo_.addAttribute( &program_,"uv",2,offset(vertex_t,t));
+    vbo_.addAttribute( &program_,"tangent",3,offset(vertex_t,tg));
+    vbo_.addAttribute( &program_,"binormal",3,offset(vertex_t,b));
 
+    id_vbo.addAttribute(&id, "texCoord", 2, offset(uvxy,uv));
+    id_vbo.addAttribute(&id, "position", 2, offset(uvxy,xy));
 #undef offset
+
+    FrameBuffer fb(1024,1024,GL_RGB, true);
+    fb.bind();
+    id.useThis();
+    id.setInputTexture("screenFramebuffer",0,fb.getFrameTexture());
+    ::fb = &fb;
+    //fb.bind();
+    id.useThis();
+    
+
     UniformMatrix4fv modelView_(&program_, "mvm"),
         projection_(&program_,"p"),
         normalMat_(&program_,"normalMat");
@@ -286,6 +320,7 @@ int main(int argc, char* argv[])
 
     
     program = &program_;
+    ::id = &id;
 
     modelView = &modelView_;
     projection = &projection_;
@@ -313,7 +348,6 @@ int main(int argc, char* argv[])
     setUniformToTexture2D (program, CURRENT_DIR "/Monk_D.tga","diffuseTex" ,0);
     setUniformToTexture2D (program, CURRENT_DIR "/Monk_S.tga","specularTex" ,1);
     setUniformToTexture2D (program, CURRENT_DIR "/Monk_N.tga","normalTex" ,2);
-    //setUniformToTexture2D (program, CURRENT_DIR "/floor.jpg","floorTex" ,3);
 
     t.start();
     glutMainLoop();

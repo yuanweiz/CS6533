@@ -3,6 +3,8 @@
 // Classes inheriting Noncopyable will not have default compiler generated copy
 // constructor and assignment operator
 class Noncopyable {
+    public:
+        Noncopyable(Noncopyable&&)=default;
 protected:
   Noncopyable() {}
   ~Noncopyable() {}

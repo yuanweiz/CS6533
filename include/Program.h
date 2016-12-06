@@ -4,6 +4,8 @@
 #include "Noncopyable.h"
 #include "Error.h"
 #include <string>
+#include "Wrapper.h"
+#include <assert.h>
 // Light wrapper around GLSL program handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 
@@ -22,10 +24,12 @@ public:
           VertexBuffer* vbo, IndexBuffer*ibo,
           const std::string& name = "shader program"); 
 
+  void setInputTexture(const char* uniformName, GLuint texUnit, GLuint tex);
+
   ~Program() {
     glDeleteProgram(handle_);
   }
-  void useThis(){ glUseProgram(handle_);}
+  void useThis();
 
   GLuint getAttribute(const char* name){
       return glGetAttribLocation(handle_,name);

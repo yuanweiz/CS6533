@@ -7,20 +7,27 @@
 #include "Program.h"
 
 #include "geometrymaker.h"
+#include "Attribute.h"
+#include "Texture.h"
+#include <memory>
 // Light wrapper around a GL buffer object handle that automatically allocates
 // and deallocates. Can be casted to a GLuint.
 
+
 class Attribute;
 namespace detail{
-template <int BUFFER,typename T>
-class GlBufferObject : Noncopyable {
+class BufferObject : Noncopyable {
 protected:
   GLuint handle_;
   size_t size_;
+  size_t elementSize_;
+  GLenum BUFFER_;
 
 public:
-  typedef T data_type;
-  GlBufferObject (T*data, size_t sz){
+  template <class T>
+  BufferObject (GLenum BUFFER,T*data, size_t sz){
+      BUFFER_ = BUFFER;
+      elementSize_ = sizeof (T);
       size_ = sz;
       glGenBuffers(1, &handle_);
       glBindBuffer(BUFFER,handle_);
@@ -28,42 +35,94 @@ public:
       checkGlErrors(__FILE__, __LINE__);
   }
   void bind (){
-      glBindBuffer(BUFFER,handle_);
+      glBindBuffer(BUFFER_,handle_);
   }
 
-  ~GlBufferObject() {
+  ~BufferObject() {
     glDeleteBuffers(1, &handle_);
   }
 
+  size_t elementSize(){return elementSize_;}
   size_t size(){return size_;}
   GLuint get(){return handle_;}
 };
 }
 
-class IndexBuffer :
-    public detail::GlBufferObject
-    <GL_ELEMENT_ARRAY_BUFFER, unsigned short> {
-        using Base = detail::GlBufferObject<
-            GL_ELEMENT_ARRAY_BUFFER, unsigned short>;
+class IndexBuffer
+{
         public:
         IndexBuffer(unsigned short *data,size_t sz)
-            :Base(data,sz){}
-    };
-class VertexBuffer : public detail::GlBufferObject<GL_ARRAY_BUFFER, VertexPNTBTG> {
+            :bufferObject_(GL_ELEMENT_ARRAY_BUFFER,data,sz){}
+        void bind (){
+            bufferObject_.bind();
+        }
+        size_t elementSize(){return bufferObject_.elementSize();}
+        size_t size(){return bufferObject_.size();}
+        private:
+        detail::BufferObject bufferObject_;
+};
+
+class VertexBuffer  {
     public:
-        using Base=detail::GlBufferObject<GL_ARRAY_BUFFER,
-              VertexPNTBTG>;
-        using Base::data_type;
-        VertexBuffer( data_type *data,size_t sz)
-            :Base(data,sz)
+        //using Base::data_type;
+        template <typename T>
+        VertexBuffer( T *data,size_t sz)
+            :bufferObject_(GL_ARRAY_BUFFER,data,sz)
         {
         }
-    void addAttribute(const Attribute& attrib){
-        attributes_.push_back(attrib); //copy semantic
-    }
-    void setAttributePointers();
+        void bind (){
+            bufferObject_.bind();
+        }
+        size_t elementSize(){return bufferObject_.elementSize();}
+        size_t size(){return bufferObject_.size();}
+        size_t get() {return bufferObject_.get();}
+
+        void addAttribute(Program* program, const char* name,int length, void* offsetInBytes){
+            attributes_.push_back(
+             Attribute(program,this,name,length,offsetInBytes)
+             );
+        }
+        void setAttributePointers();
     private:
-    std::vector<Attribute> attributes_;
+        detail::BufferObject bufferObject_;
+        std::vector<Attribute> attributes_;
+};
+
+class FrameBuffer {
+    public:
+        FrameBuffer(int w,int h, GLenum COLOR,bool use_depth=true)
+            :w_(w),h_(h)
+        {
+            glGenFramebuffers(1,&frameBuf_);
+            glBindFramebuffer(GL_FRAMEBUFFER, frameBuf_);
+            frameTex_.reset( new Texture( Texture::createEmptyTexture(w,h,COLOR)));
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, frameTex_->get(), 0);
+            if (use_depth){
+                depthTex_.reset(
+                        new Texture(Texture::createEmptyTexture(w,h,GL_DEPTH_COMPONENT))
+                        );
+                glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT24,w,h);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                        GL_TEXTURE_2D,
+                        depthTex_->get(), 0);
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER,0);
+        }
+
+        void bind(){
+            glBindFramebuffer(GL_FRAMEBUFFER, frameBuf_);
+            glViewport(0, 0, w_, h_);
+            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        }
+        GLuint getFrameTexture(){
+            return frameTex_->get();
+        }
+
+    private:
+        int w_,h_;
+        GLuint frameBuf_ ;
+        std::unique_ptr<Texture> frameTex_,depthTex_;
 };
 
 #endif //__BUFFER_OBJECT_H

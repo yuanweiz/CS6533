@@ -7,9 +7,10 @@
 class Program;
 class VertexBuffer;
 //currently only support GL_FLOAT
-class Attribute{
+class Attribute :Noncopyable{
     public:
         //obsolete
+        Attribute (Attribute&&)=default;
         Attribute(Program * program, VertexBuffer* vbo, const char* name,
                 int length, void* offsetInBytes);
                 

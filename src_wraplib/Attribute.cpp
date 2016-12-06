@@ -13,11 +13,10 @@ Attribute::Attribute(Program * program, VertexBuffer* vbo, const char* name,
     enabled_(false)
 {
     this->enable();
-    vbo->addAttribute(*this);
 }
 void Attribute::vertexAttribPointer(){
     assert( ogl::getCurrentArrayBuffer() == vbo_->get());
     assert( (GLuint)ogl::getCurrentProgram() == program_->get());
     glVertexAttribPointer(get(),length_,GL_FLOAT,GL_FALSE,
-            sizeof (VertexBuffer::data_type),offsetInBytes_ );
+            vbo_->elementSize(),offsetInBytes_ );
 }
